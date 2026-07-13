@@ -931,3 +931,64 @@ a {
     gap: 3px;
   }
 }
+.sidebar__profile {
+  min-width: 0;
+}
+
+.sidebar__profile-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.sidebar__profile-copy strong,
+.sidebar__profile-copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar__avatar--image {
+  object-fit: cover;
+}
+
+.sidebar__auth-button {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.sidebar__auth-button:hover {
+  color: #ff9b9b;
+  background: #2a1719;
+}
+
+.sidebar__google-button {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 11px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.sidebar__google-button:hover {
+  background: var(--surface-hover);
+}
+
+.sidebar__auth-status {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
