@@ -992,3 +992,21 @@ a {
   color: var(--muted);
   font-size: 0.8rem;
 }
+
+.exercise-card__badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.exercise-card__optional {
+  padding: 3px 7px;
+  color: #f5d88a;
+  background: #292311;
+  border: 1px solid #4b4020;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}

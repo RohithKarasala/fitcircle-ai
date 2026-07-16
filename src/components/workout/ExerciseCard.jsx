@@ -55,9 +55,17 @@ function ExerciseCard({
         onClick={() => setIsExpanded((current) => !current)}
       >
         <div>
-          <span className="exercise-card__equipment">
-            {exercise.equipment}
-          </span>
+          <div className="exercise-card__badges">
+            <span className="exercise-card__equipment">
+              {exercise.equipment}
+            </span>
+
+            {exercise.optional && (
+              <span className="exercise-card__optional">
+                Optional
+              </span>
+            )}
+          </div>
 
           <h2>{exercise.name}</h2>
 
