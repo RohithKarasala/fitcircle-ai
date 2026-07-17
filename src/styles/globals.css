@@ -1021,14 +1021,53 @@ a {
   background: var(--surface-hover);
 }
 
+.day-selector__button--draft {
+  color: #f5d88a;
+  background: #181711;
+  border-color: #4b4020;
+}
+
+.day-selector__button--draft small {
+  color: #b39f64;
+}
+
+.day-selector__button--finished {
+  color: var(--primary);
+  background: #121a10;
+  border-color: #33431f;
+}
+
+.day-selector__button--finished small {
+  color: #8fae5d;
+}
+
 .day-selector__button--active {
-  color: #101409;
-  background: var(--primary);
+  color: var(--text);
+  background: var(--surface-hover);
   border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
 }
 
 .day-selector__button--active small {
-  color: #39421f;
+  color: #a5adba;
+}
+
+.day-selector__button--draft.day-selector__button--active {
+  color: #f5d88a;
+  background: #1f1d12;
+}
+
+.day-selector__button--draft.day-selector__button--active small {
+  color: #c1ad6d;
+}
+
+.day-selector__button--finished.day-selector__button--active {
+  color: var(--primary);
+  background: #172111;
+}
+
+.day-selector__button--finished.day-selector__button--active small {
+  color: #9fbd6d;
 }
 
 .workout-progress-card {
@@ -1049,6 +1088,13 @@ a {
 .workout-progress-card span,
 .workout-progress-card strong {
   display: block;
+}
+
+.workout-progress-card small {
+  display: block;
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 0.76rem;
 }
 
 .workout-progress-card > div:first-child span {

@@ -4,7 +4,6 @@ import {
   LoaderCircle,
   LogIn,
   RotateCcw,
-  Save,
   Share2,
 } from "lucide-react";
 import {
@@ -26,9 +25,12 @@ import {
   workoutProgram,
 } from "../data/workoutProgram";
 import {
+  deleteWorkoutDraft,
   ensureUserProfile,
+  getUserWorkoutDrafts,
   getUserWorkoutHistory,
   saveWorkoutSession,
+  upsertWorkoutDraft,
 } from "../services/workouts";
 import { getCurrentUserProfile } from "../services/profile";
 import {
@@ -130,6 +132,94 @@ function clearDraftForDay(day) {
   );
 }
 
+function getWorkoutStateFromDraft(draft, workout) {
+  const workoutSets = draft?.workoutPayload?.workoutSets;
+  const exerciseIds = workout.exercises.map(
+    (exercise) => exercise.id,
+  );
+
+  if (!workoutSets) {
+    return createWorkoutState(workout);
+  }
+
+  const hasMatchingExercises = exerciseIds.every(
+    (exerciseId) => Array.isArray(workoutSets[exerciseId]),
+  );
+
+  return hasMatchingExercises
+    ? workoutSets
+    : createWorkoutState(workout);
+}
+
+function hasWorkoutEntries(workoutSets) {
+  return Object.values(workoutSets)
+    .flat()
+    .some(
+      (set) =>
+        set.completed ||
+        set.weight !== "" ||
+        set.reps !== "" ||
+        set.rir !== "",
+    );
+}
+
+function getWeekStart(value = new Date()) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  date.setHours(0, 0, 0, 0);
+
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  date.setDate(date.getDate() + mondayOffset);
+
+  return date;
+}
+
+function getFinishedDaysThisWeek(sessions) {
+  const weekStart = getWeekStart();
+
+  if (!weekStart) {
+    return new Set();
+  }
+
+  const nextWeekStart = new Date(weekStart);
+  nextWeekStart.setDate(weekStart.getDate() + 7);
+
+  return new Set(
+    sessions
+      .filter((session) => {
+        const date = new Date(session.date);
+
+        return (
+          !Number.isNaN(date.getTime()) &&
+          date >= weekStart &&
+          date < nextWeekStart
+        );
+      })
+      .map((session) => session.day),
+  );
+}
+
+function getLocalDraftDays(workoutSchedule) {
+  return new Set(
+    weekDays.filter((day) => {
+      const workoutKey =
+        workoutSchedule[day] ?? defaultWorkoutSchedule[day];
+      const draftSets = getDraftForDay(
+        day,
+        workoutProgram[workoutKey],
+      );
+
+      return hasWorkoutEntries(draftSets);
+    }),
+  );
+}
+
 function Workout() {
   const { user, isLoading: isAuthLoading, signInWithGoogle } =
     useAuth();
@@ -155,6 +245,13 @@ function Workout() {
   const [isHistoryLoading, setIsHistoryLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [remoteDraftsByDay, setRemoteDraftsByDay] =
+    useState({});
+  const [hasLoadedRemoteDrafts, setHasLoadedRemoteDrafts] =
+    useState(false);
+  const [finishedDays, setFinishedDays] = useState(new Set());
+  const [draftSaveStatus, setDraftSaveStatus] =
+    useState("idle");
   const [sharingSessionId, setSharingSessionId] =
     useState("");
   const [shareGroupIds, setShareGroupIds] = useState({});
@@ -170,6 +267,12 @@ function Workout() {
   const isCompletionWorkout = workout.exercises.every(
     (exercise) => exercise.trackingType === "completion",
   );
+  const localDraftDays = useMemo(
+    () => getLocalDraftDays(workoutSchedule),
+    [workoutSchedule],
+  );
+  const selectedDayHasEntries =
+    hasWorkoutEntries(workoutSets);
 
   const {
     data: groups = [],
@@ -267,9 +370,118 @@ function Workout() {
     Promise.resolve().then(loadHistory);
   }, [loadHistory]);
 
+  const loadWorkoutStatus = useCallback(async () => {
+    if (!user) {
+      setRemoteDraftsByDay({});
+      setFinishedDays(new Set());
+      setHasLoadedRemoteDrafts(false);
+      return;
+    }
+
+    try {
+      const [drafts, sessions] = await Promise.all([
+        getUserWorkoutDrafts({ userId: user.id }),
+        getUserWorkoutHistory({
+          userId: user.id,
+          limit: 75,
+        }),
+      ]);
+
+      const draftMap = Object.fromEntries(
+        drafts.map((draft) => [draft.workoutDay, draft]),
+      );
+
+      setRemoteDraftsByDay(draftMap);
+      setFinishedDays(getFinishedDaysThisWeek(sessions));
+      setHasLoadedRemoteDrafts(true);
+
+      const selectedDraft = draftMap[selectedDay];
+
+      if (selectedDraft) {
+        const selectedDraftWorkoutKey =
+          workoutSchedule[selectedDay] ??
+          defaultWorkoutSchedule[selectedDay];
+
+        setWorkoutSets((current) => {
+          const draftWorkoutSets = getWorkoutStateFromDraft(
+            selectedDraft,
+            workoutProgram[selectedDraftWorkoutKey],
+          );
+
+          return JSON.stringify(current) ===
+            JSON.stringify(draftWorkoutSets)
+            ? current
+            : draftWorkoutSets;
+        });
+      }
+    } catch (error) {
+      console.error(error);
+      setHasLoadedRemoteDrafts(true);
+      setErrorMessage(error.message);
+    }
+  }, [selectedDay, user, workoutSchedule]);
+
+  useEffect(() => {
+    Promise.resolve().then(loadWorkoutStatus);
+  }, [loadWorkoutStatus]);
+
   useEffect(() => {
     saveDraftForDay(selectedDay, workoutSets);
   }, [selectedDay, workoutSets]);
+
+  useEffect(() => {
+    if (!user || !hasLoadedRemoteDrafts) {
+      return undefined;
+    }
+
+    const timeoutId = window.setTimeout(async () => {
+      try {
+        setDraftSaveStatus("saving");
+
+        if (!selectedDayHasEntries) {
+          await deleteWorkoutDraft({
+            userId: user.id,
+            workoutDay: selectedDay,
+          });
+
+          setRemoteDraftsByDay((current) => {
+            const nextDrafts = { ...current };
+            delete nextDrafts[selectedDay];
+            return nextDrafts;
+          });
+          setDraftSaveStatus("idle");
+          return;
+        }
+
+        const savedDraft = await upsertWorkoutDraft({
+          userId: user.id,
+          workoutDay: selectedDay,
+          workoutName: workout.name,
+          workoutKey: selectedWorkoutKey,
+          workoutSets,
+        });
+
+        setRemoteDraftsByDay((current) => ({
+          ...current,
+          [selectedDay]: savedDraft,
+        }));
+        setDraftSaveStatus("saved");
+      } catch (error) {
+        console.error(error);
+        setDraftSaveStatus("error");
+      }
+    }, 900);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [
+    hasLoadedRemoteDrafts,
+    selectedDay,
+    selectedDayHasEntries,
+    selectedWorkoutKey,
+    user,
+    workout.name,
+    workoutSets,
+  ]);
 
   const previousWorkout = history[0];
 
@@ -288,9 +500,14 @@ function Workout() {
     const nextWorkoutKey =
       workoutSchedule[day] ?? defaultWorkoutSchedule[day];
     const nextWorkout = workoutProgram[nextWorkoutKey];
+    const remoteDraft = remoteDraftsByDay[day];
 
     setSelectedDay(day);
-    setWorkoutSets(getDraftForDay(day, nextWorkout));
+    setWorkoutSets(
+      remoteDraft
+        ? getWorkoutStateFromDraft(remoteDraft, nextWorkout)
+        : getDraftForDay(day, nextWorkout),
+    );
     setStatusMessage("");
     setErrorMessage("");
   };
@@ -323,7 +540,7 @@ function Workout() {
     });
   };
 
-  const resetWorkout = () => {
+  const resetWorkout = async () => {
     const confirmed = window.confirm(
       "Clear all entries from this workout?",
     );
@@ -334,8 +551,26 @@ function Workout() {
 
     clearDraftForDay(selectedDay);
     setWorkoutSets(createWorkoutState(workout));
+    setRemoteDraftsByDay((current) => {
+      const nextDrafts = { ...current };
+      delete nextDrafts[selectedDay];
+      return nextDrafts;
+    });
     setStatusMessage("");
     setErrorMessage("");
+    setDraftSaveStatus("idle");
+
+    if (user) {
+      try {
+        await deleteWorkoutDraft({
+          userId: user.id,
+          workoutDay: selectedDay,
+        });
+      } catch (error) {
+        console.error(error);
+        setErrorMessage(error.message);
+      }
+    }
   };
 
   const handleSignIn = async () => {
@@ -348,10 +583,10 @@ function Workout() {
     }
   };
 
-  const handleSaveWorkout = async () => {
+  const handleFinishWorkout = async () => {
     if (!user) {
       setErrorMessage(
-        "Sign in with Google before saving your workout.",
+        "Sign in with Google before finishing your workout.",
       );
       return;
     }
@@ -396,16 +631,32 @@ function Workout() {
       }
 
       clearDraftForDay(selectedDay);
+      await deleteWorkoutDraft({
+        userId: user.id,
+        workoutDay: selectedDay,
+      });
+      setRemoteDraftsByDay((current) => {
+        const nextDrafts = { ...current };
+        delete nextDrafts[selectedDay];
+        return nextDrafts;
+      });
+      setFinishedDays((current) => {
+        const nextDays = new Set(current);
+        nextDays.add(selectedDay);
+        return nextDays;
+      });
       setWorkoutSets(createWorkoutState(workout));
       setStatusMessage(
         sharedGroupCount > 0
-          ? `Workout saved and shared to ${sharedGroupCount} group${
+          ? `Workout finished and shared to ${sharedGroupCount} group${
               sharedGroupCount === 1 ? "" : "s"
             }.`
-          : "Workout saved securely to Supabase.",
+          : "Workout finished securely to Supabase.",
       );
+      setDraftSaveStatus("idle");
 
       await loadHistory();
+      await loadWorkoutStatus();
 
       if (failedShareCount > 0) {
         setErrorMessage(
@@ -468,6 +719,30 @@ function Workout() {
     () => history,
     [history],
   );
+  const getDayState = (day) => {
+    if (finishedDays.has(day)) {
+      return "finished";
+    }
+
+    if (
+      (day === selectedDay && selectedDayHasEntries) ||
+      remoteDraftsByDay[day] ||
+      localDraftDays.has(day)
+    ) {
+      return "draft";
+    }
+
+    return "idle";
+  };
+
+  const draftStatusText = {
+    idle: selectedDayHasEntries
+      ? "Draft saved locally"
+      : "Not started",
+    saving: "Saving draft...",
+    saved: "Draft saved",
+    error: "Draft save failed",
+  }[draftSaveStatus];
 
   return (
     <div className="page workout-page">
@@ -495,7 +770,7 @@ function Workout() {
             type="button"
             className="primary-action-button"
             disabled={isSaving || isAuthLoading}
-            onClick={handleSaveWorkout}
+            onClick={handleFinishWorkout}
           >
             {isSaving ? (
               <LoaderCircle
@@ -503,10 +778,10 @@ function Workout() {
                 size={17}
               />
             ) : (
-              <Save size={17} />
+              <Check size={17} />
             )}
 
-            {isSaving ? "Saving…" : "Save workout"}
+            {isSaving ? "Finishing…" : "Finish workout"}
           </button>
         </div>
       </section>
@@ -521,8 +796,8 @@ function Workout() {
             <strong>Sign in to save across devices</strong>
             <p>
               Your current workout remains available as a
-              local draft, but completed sessions require an
-              account.
+              local draft, but cloud drafts and finished
+              sessions require an account.
             </p>
           </div>
 
@@ -541,31 +816,35 @@ function Workout() {
         className="day-selector"
         aria-label="Select workout day"
       >
-        {weekDays.map((day) => (
-          <button
-            type="button"
-            key={day}
-            className={`day-selector__button ${
-              selectedDay === day
-                ? "day-selector__button--active"
-                : ""
-            }`}
-            onClick={() => changeWorkoutDay(day)}
-          >
-            <span>
-              {weekDayLabels[day].slice(0, 3)}
-            </span>
+        {weekDays.map((day) => {
+          const dayState = getDayState(day);
 
-            <small>
-              {
-                workoutProgram[
-                  workoutSchedule[day] ??
-                    defaultWorkoutSchedule[day]
-                ].name
-              }
-            </small>
-          </button>
-        ))}
+          return (
+            <button
+              type="button"
+              key={day}
+              className={`day-selector__button day-selector__button--${dayState} ${
+                selectedDay === day
+                  ? "day-selector__button--active"
+                  : ""
+              }`}
+              onClick={() => changeWorkoutDay(day)}
+            >
+              <span>
+                {weekDayLabels[day].slice(0, 3)}
+              </span>
+
+              <small>
+                {
+                  workoutProgram[
+                    workoutSchedule[day] ??
+                      defaultWorkoutSchedule[day]
+                  ].name
+                }
+              </small>
+            </button>
+          );
+        })}
       </section>
 
       <section className="workout-progress-card">
@@ -578,6 +857,7 @@ function Workout() {
                 : "Walk not logged yet"
               : `${completedSets} of ${totalSets} sets logged`}
           </strong>
+          <small>{draftStatusText}</small>
         </div>
 
         <div className="workout-progress-bar">

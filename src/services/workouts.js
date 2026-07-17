@@ -295,6 +295,107 @@ export async function getUserWorkoutHistory({
   return groupSetsBySession(sessions, sets ?? []);
 }
 
+export async function getUserWorkoutDrafts({ userId }) {
+  if (!userId) {
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from("workout_drafts")
+    .select(
+      "id, workout_day, workout_name, workout_key, workout_payload, updated_at",
+    )
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw new Error(
+      `Unable to load workout drafts: ${error.message}`,
+    );
+  }
+
+  return (data ?? []).map((draft) => ({
+    id: draft.id,
+    workoutDay: draft.workout_day,
+    workoutName: draft.workout_name,
+    workoutKey: draft.workout_key,
+    workoutPayload: draft.workout_payload ?? {},
+    updatedAt: draft.updated_at,
+  }));
+}
+
+export async function upsertWorkoutDraft({
+  userId,
+  workoutDay,
+  workoutName,
+  workoutKey,
+  workoutSets,
+}) {
+  if (!userId) {
+    throw new Error("Sign in before saving workout drafts.");
+  }
+
+  const updatedAt = new Date().toISOString();
+
+  const { data, error } = await supabase
+    .from("workout_drafts")
+    .upsert(
+      {
+        user_id: userId,
+        workout_day: workoutDay,
+        workout_name: workoutName,
+        workout_key: workoutKey,
+        workout_payload: {
+          workoutSets,
+        },
+        updated_at: updatedAt,
+      },
+      {
+        onConflict: "user_id,workout_day",
+      },
+    )
+    .select(
+      "id, workout_day, workout_name, workout_key, workout_payload, updated_at",
+    )
+    .single();
+
+  if (error) {
+    throw new Error(
+      `Unable to auto-save workout draft: ${error.message}`,
+    );
+  }
+
+  return {
+    id: data.id,
+    workoutDay: data.workout_day,
+    workoutName: data.workout_name,
+    workoutKey: data.workout_key,
+    workoutPayload: data.workout_payload ?? {},
+    updatedAt: data.updated_at,
+  };
+}
+
+export async function deleteWorkoutDraft({
+  userId,
+  workoutDay,
+}) {
+  if (!userId || !workoutDay) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from("workout_drafts")
+    .delete()
+    .eq("user_id", userId)
+    .eq("workout_day", workoutDay);
+
+  if (error) {
+    throw new Error(
+      `Unable to clear workout draft: ${error.message}`,
+    );
+  }
+}
+
 export async function deleteWorkoutSession({
   userId,
   sessionId,
