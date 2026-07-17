@@ -350,6 +350,16 @@ a {
   background: #c4fa61;
 }
 
+.primary-button--complete {
+  color: var(--primary);
+  background: #172113;
+  border: 1px solid #344824;
+}
+
+.primary-button--complete:hover {
+  background: #1d2a16;
+}
+
 .stat-card {
   display: flex;
   min-height: 190px;
@@ -1141,6 +1151,10 @@ a {
   gap: 14px;
 }
 
+.workout-page__add-exercise {
+  width: fit-content;
+}
+
 .exercise-card {
   overflow: hidden;
   background: var(--surface);
@@ -1172,6 +1186,125 @@ a {
   margin: 0;
   color: var(--muted);
   font-size: 0.78rem;
+}
+
+.exercise-card__header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.exercise-card__icon-action {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  place-items: center;
+}
+
+.exercise-card__icon-action:hover {
+  color: var(--primary);
+  border-color: #4b5d2f;
+}
+
+.exercise-card__icon-action--danger:hover {
+  color: #ff8b8b;
+  border-color: #553033;
+}
+
+.workout-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  padding: 18px;
+  background: rgb(0 0 0 / 72%);
+  place-items: center;
+}
+
+.workout-modal {
+  width: min(620px, 100%);
+  max-height: min(760px, calc(100vh - 36px));
+  overflow: auto;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 42%);
+}
+
+.workout-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.workout-modal__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+  letter-spacing: -0.03em;
+}
+
+.workout-modal__form {
+  display: grid;
+  gap: 14px;
+}
+
+.workout-modal__form label {
+  display: grid;
+  gap: 7px;
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.workout-modal__form input,
+.workout-modal__form textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 11px 12px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 10px;
+  font: inherit;
+  outline: none;
+}
+
+.workout-modal__form textarea {
+  resize: vertical;
+}
+
+.workout-modal__form input:focus,
+.workout-modal__form textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
+.workout-modal__grid {
+  display: grid;
+  grid-template-columns: 0.7fr 1fr 0.8fr;
+  gap: 12px;
+}
+
+.workout-modal__error {
+  margin: 0;
+  color: #ffb0b0;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.workout-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 4px;
 }
 
 .exercise-card__equipment {
@@ -1331,6 +1464,29 @@ a {
   }
 
   .workout-actions button {
+    width: 100%;
+  }
+
+  .workout-modal-backdrop {
+    align-items: end;
+    padding: 10px;
+  }
+
+  .workout-modal {
+    max-height: calc(100vh - 20px);
+    padding: 18px;
+    border-radius: 16px;
+  }
+
+  .workout-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workout-modal__actions {
+    flex-direction: column-reverse;
+  }
+
+  .workout-modal__actions button {
     width: 100%;
   }
 

@@ -1,6 +1,7 @@
 import {
   ArrowRight,
   CalendarDays,
+  CheckCircle2,
   Dumbbell,
   LoaderCircle,
   Pencil,
@@ -14,6 +15,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
   defaultWorkoutSchedule,
+  getWeekdayKey,
   getTodayWorkoutKey,
   normalizeWorkoutSchedule,
   workoutProgram,
@@ -22,6 +24,7 @@ import {
   getCurrentUserProfile,
   updateCurrentWeight,
 } from "../services/profile";
+import { getUserWorkoutHistory } from "../services/workouts";
 
 function getTimeBasedGreeting(date = new Date()) {
   const hour = date.getHours();
@@ -35,6 +38,44 @@ function getTimeBasedGreeting(date = new Date()) {
   }
 
   return "Good evening";
+}
+
+function getWeekStart(value = new Date()) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  date.setHours(0, 0, 0, 0);
+
+  const day = date.getDay();
+  const mondayOffset = day === 0 ? -6 : 1 - day;
+
+  date.setDate(date.getDate() + mondayOffset);
+
+  return date;
+}
+
+function hasSessionThisWeek(sessions) {
+  const weekStart = getWeekStart();
+
+  if (!weekStart) {
+    return false;
+  }
+
+  const nextWeekStart = new Date(weekStart);
+  nextWeekStart.setDate(weekStart.getDate() + 7);
+
+  return sessions.some((session) => {
+    const date = new Date(session.date);
+
+    return (
+      !Number.isNaN(date.getTime()) &&
+      date >= weekStart &&
+      date < nextWeekStart
+    );
+  });
 }
 
 function Dashboard() {
@@ -54,6 +95,8 @@ function Dashboard() {
     defaultWorkoutSchedule,
   );
   const [trackRir, setTrackRir] = useState(false);
+  const [isTodayWorkoutFinished, setIsTodayWorkoutFinished] =
+    useState(false);
 
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -86,6 +129,7 @@ function Dashboard() {
         setProfileDisplayName("");
         setWorkoutSchedule(defaultWorkoutSchedule);
         setTrackRir(false);
+        setIsTodayWorkoutFinished(false);
         return;
       }
 
@@ -93,7 +137,14 @@ function Dashboard() {
       setWeightError("");
 
       try {
-        const profile = await getCurrentUserProfile(user.id);
+        const [profile, todaySessions] = await Promise.all([
+          getCurrentUserProfile(user.id),
+          getUserWorkoutHistory({
+            userId: user.id,
+            workoutDay: getWeekdayKey(),
+            limit: 10,
+          }),
+        ]);
 
         if (!isCurrent) {
           return;
@@ -109,6 +160,9 @@ function Dashboard() {
           ),
         );
         setTrackRir(Boolean(profile?.trackRir));
+        setIsTodayWorkoutFinished(
+          hasSessionThisWeek(todaySessions),
+        );
         setCurrentWeight(nextWeight);
         setWeightInput(
           nextWeight === null ? "" : String(nextWeight),
@@ -186,7 +240,11 @@ function Dashboard() {
             </div>
 
             <div className="card__icon">
-              <Dumbbell size={22} />
+              {isTodayWorkoutFinished ? (
+                <CheckCircle2 size={22} />
+              ) : (
+                <Dumbbell size={22} />
+              )}
             </div>
           </div>
 
@@ -204,7 +262,9 @@ function Dashboard() {
             <div>
               <span>Target effort</span>
               <strong>
-                {isRecoveryWorkout
+                {isTodayWorkoutFinished
+                  ? "Completed"
+                  : isRecoveryWorkout
                   ? "Easy pace"
                   : trackRir
                     ? "1–2 RIR"
@@ -213,8 +273,19 @@ function Dashboard() {
             </div>
           </div>
 
-          <Link className="primary-button" to="/workout">
-            {isRecoveryWorkout ? "Open plan" : "Start workout"}
+          <Link
+            className={`primary-button ${
+              isTodayWorkoutFinished
+                ? "primary-button--complete"
+                : ""
+            }`}
+            to="/workout"
+          >
+            {isTodayWorkoutFinished
+              ? "View finished workout"
+              : isRecoveryWorkout
+                ? "Open plan"
+                : "Start workout"}
             <ArrowRight size={18} />
           </Link>
         </article>

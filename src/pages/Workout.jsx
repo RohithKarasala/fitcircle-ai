@@ -3,8 +3,10 @@ import {
   Cloud,
   LoaderCircle,
   LogIn,
+  Plus,
   RotateCcw,
   Share2,
+  X,
 } from "lucide-react";
 import {
   useCallback,
@@ -39,6 +41,14 @@ import {
 } from "../hooks/useGroups";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
+const DEFAULT_EXERCISE_FORM = {
+  name: "",
+  equipment: "Machine",
+  sets: "3",
+  repRange: "8-12",
+  restSeconds: "60",
+  description: "Log the sets you perform today.",
+};
 
 function createExerciseSets(exercise) {
   return Array.from(
@@ -51,6 +61,28 @@ function createExerciseSets(exercise) {
       rir: "",
     }),
   );
+}
+
+function resizeExerciseSets(currentSets, setCount) {
+  const nextSetCount = Math.max(Number(setCount) || 1, 1);
+  const existingSets = currentSets ?? [];
+
+  return Array.from({ length: nextSetCount }, (_, index) => {
+    const existingSet = existingSets[index];
+
+    return existingSet
+      ? {
+          ...existingSet,
+          setNumber: index + 1,
+        }
+      : {
+          id: crypto.randomUUID(),
+          setNumber: index + 1,
+          weight: "",
+          reps: "",
+          rir: "",
+        };
+  });
 }
 
 function createWorkoutState(workout) {
@@ -107,11 +139,21 @@ function getDraftForDay(day, workout) {
   return draft.workoutSets;
 }
 
-function saveDraftForDay(day, workoutSets) {
+function getLocalWorkoutForDay(day, fallbackWorkout) {
+  const drafts = getDrafts();
+  const draftWorkout = drafts[day]?.workout;
+
+  return draftWorkout?.exercises?.length
+    ? draftWorkout
+    : fallbackWorkout;
+}
+
+function saveDraftForDay(day, workoutSets, workout) {
   const drafts = getDrafts();
 
   drafts[day] = {
     savedAt: new Date().toISOString(),
+    workout,
     workoutSets,
   };
 
@@ -149,6 +191,14 @@ function getWorkoutStateFromDraft(draft, workout) {
   return hasMatchingExercises
     ? workoutSets
     : createWorkoutState(workout);
+}
+
+function getWorkoutFromDraft(draft, fallbackWorkout) {
+  const draftWorkout = draft?.workoutPayload?.workout;
+
+  return draftWorkout?.exercises?.length
+    ? draftWorkout
+    : fallbackWorkout;
 }
 
 function hasWorkoutEntries(workoutSets) {
@@ -205,17 +255,210 @@ function getFinishedDaysThisWeek(sessions) {
   );
 }
 
+function isSameWorkout(firstWorkout, secondWorkout) {
+  return (
+    JSON.stringify(firstWorkout) ===
+    JSON.stringify(secondWorkout)
+  );
+}
+
+function getExerciseFormFromExercise(exercise) {
+  if (!exercise) {
+    return DEFAULT_EXERCISE_FORM;
+  }
+
+  return {
+    name: exercise.name,
+    equipment: exercise.equipment,
+    sets: String(exercise.sets),
+    repRange: exercise.repRange,
+    restSeconds: String(exercise.restSeconds),
+    description: exercise.description,
+  };
+}
+
+function normalizeExerciseForm(form) {
+  const name = form.name.trim();
+
+  if (!name) {
+    throw new Error("Exercise name is required.");
+  }
+
+  return {
+    name,
+    equipment: form.equipment.trim() || "Machine",
+    sets: Math.max(Number(form.sets) || 1, 1),
+    repRange: form.repRange.trim() || "8-12",
+    restSeconds: Math.max(Number(form.restSeconds) || 0, 0),
+    description:
+      form.description.trim() ||
+      "Log the sets you perform today.",
+  };
+}
+
+function ExerciseEditorModal({
+  mode,
+  form,
+  error,
+  onChange,
+  onClose,
+  onSubmit,
+}) {
+  if (!mode) {
+    return null;
+  }
+
+  const title =
+    mode === "add" ? "Add exercise" : "Edit exercise";
+  const actionLabel =
+    mode === "add" ? "Add exercise" : "Save exercise";
+
+  return (
+    <div className="workout-modal-backdrop">
+      <section
+        className="workout-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="exercise-editor-title"
+      >
+        <div className="workout-modal__header">
+          <div>
+            <p className="eyebrow">Today only</p>
+            <h2 id="exercise-editor-title">{title}</h2>
+          </div>
+
+          <button
+            type="button"
+            className="icon-button"
+            aria-label="Close exercise editor"
+            onClick={onClose}
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <form
+          className="workout-modal__form"
+          onSubmit={onSubmit}
+        >
+          <label>
+            <span>Exercise name</span>
+            <input
+              value={form.name}
+              onChange={(event) =>
+                onChange("name", event.target.value)
+              }
+              placeholder="Bicep Curl"
+            />
+          </label>
+
+          <label>
+            <span>Equipment</span>
+            <input
+              value={form.equipment}
+              onChange={(event) =>
+                onChange("equipment", event.target.value)
+              }
+              placeholder="Cable, dumbbells, machine"
+            />
+          </label>
+
+          <div className="workout-modal__grid">
+            <label>
+              <span>Sets</span>
+              <input
+                type="number"
+                min="1"
+                step="1"
+                inputMode="numeric"
+                value={form.sets}
+                onChange={(event) =>
+                  onChange("sets", event.target.value)
+                }
+              />
+            </label>
+
+            <label>
+              <span>Rep range</span>
+              <input
+                value={form.repRange}
+                onChange={(event) =>
+                  onChange("repRange", event.target.value)
+                }
+                placeholder="8-12"
+              />
+            </label>
+
+            <label>
+              <span>Rest seconds</span>
+              <input
+                type="number"
+                min="0"
+                step="15"
+                inputMode="numeric"
+                value={form.restSeconds}
+                onChange={(event) =>
+                  onChange("restSeconds", event.target.value)
+                }
+              />
+            </label>
+          </div>
+
+          <label>
+            <span>Notes</span>
+            <textarea
+              rows={4}
+              value={form.description}
+              onChange={(event) =>
+                onChange("description", event.target.value)
+              }
+              placeholder="Cue, setup, or substitute details"
+            />
+          </label>
+
+          {error && (
+            <p className="workout-modal__error">{error}</p>
+          )}
+
+          <div className="workout-modal__actions">
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={onClose}
+            >
+              Cancel
+            </button>
+
+            <button
+              type="submit"
+              className="primary-action-button"
+            >
+              <Check size={17} />
+              {actionLabel}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>
+  );
+}
+
 function getLocalDraftDays(workoutSchedule) {
   return new Set(
     weekDays.filter((day) => {
       const workoutKey =
         workoutSchedule[day] ?? defaultWorkoutSchedule[day];
-      const draftSets = getDraftForDay(
+      const baseWorkout = workoutProgram[workoutKey];
+      const draftWorkout = getLocalWorkoutForDay(
         day,
-        workoutProgram[workoutKey],
+        baseWorkout,
       );
+      const draftSets = getDraftForDay(day, draftWorkout);
 
-      return hasWorkoutEntries(draftSets);
+      return (
+        hasWorkoutEntries(draftSets) ||
+        !isSameWorkout(draftWorkout, baseWorkout)
+      );
     }),
   );
 }
@@ -233,12 +476,16 @@ function Workout() {
   );
   const initialWorkoutKey =
     workoutSchedule[initialDay] ?? initialDay;
+  const initialWorkout = getLocalWorkoutForDay(
+    initialDay,
+    workoutProgram[initialWorkoutKey],
+  );
 
   const [workoutSets, setWorkoutSets] = useState(() =>
-    getDraftForDay(
-      initialDay,
-      workoutProgram[initialWorkoutKey],
-    ),
+    getDraftForDay(initialDay, initialWorkout),
+  );
+  const [customWorkout, setCustomWorkout] = useState(
+    initialWorkout,
   );
 
   const [history, setHistory] = useState([]);
@@ -258,12 +505,21 @@ function Workout() {
   const [trackRir, setTrackRir] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [exerciseEditorMode, setExerciseEditorMode] =
+    useState(null);
+  const [editingExercise, setEditingExercise] = useState(null);
+  const [exerciseForm, setExerciseForm] = useState(
+    DEFAULT_EXERCISE_FORM,
+  );
+  const [exerciseFormError, setExerciseFormError] =
+    useState("");
   const appliedScheduleUserIdRef = useRef("");
 
   const selectedWorkoutKey =
     workoutSchedule[selectedDay] ??
     defaultWorkoutSchedule[selectedDay];
-  const workout = workoutProgram[selectedWorkoutKey];
+  const baseWorkout = workoutProgram[selectedWorkoutKey];
+  const workout = customWorkout ?? baseWorkout;
   const isCompletionWorkout = workout.exercises.every(
     (exercise) => exercise.trackingType === "completion",
   );
@@ -273,6 +529,10 @@ function Workout() {
   );
   const selectedDayHasEntries =
     hasWorkoutEntries(workoutSets);
+  const selectedWorkoutChanged = !isSameWorkout(
+    workout,
+    baseWorkout,
+  );
 
   const {
     data: groups = [],
@@ -311,16 +571,16 @@ function Workout() {
         const scheduledWorkoutKey = getTodayWorkoutKey(
           schedule,
         );
+        const todayWorkout = getLocalWorkoutForDay(
+          today,
+          workoutProgram[scheduledWorkoutKey],
+        );
 
         setTrackRir(Boolean(profile?.trackRir));
         setWorkoutSchedule(schedule);
         setSelectedDay(today);
-        setWorkoutSets(
-          getDraftForDay(
-            today,
-            workoutProgram[scheduledWorkoutKey],
-          ),
-        );
+        setCustomWorkout(todayWorkout);
+        setWorkoutSets(getDraftForDay(today, todayWorkout));
         appliedScheduleUserIdRef.current = user.id;
       } catch (error) {
         console.error(error);
@@ -401,11 +661,16 @@ function Workout() {
         const selectedDraftWorkoutKey =
           workoutSchedule[selectedDay] ??
           defaultWorkoutSchedule[selectedDay];
+        const draftWorkout = getWorkoutFromDraft(
+          selectedDraft,
+          workoutProgram[selectedDraftWorkoutKey],
+        );
 
+        setCustomWorkout(draftWorkout);
         setWorkoutSets((current) => {
           const draftWorkoutSets = getWorkoutStateFromDraft(
             selectedDraft,
-            workoutProgram[selectedDraftWorkoutKey],
+            draftWorkout,
           );
 
           return JSON.stringify(current) ===
@@ -426,8 +691,8 @@ function Workout() {
   }, [loadWorkoutStatus]);
 
   useEffect(() => {
-    saveDraftForDay(selectedDay, workoutSets);
-  }, [selectedDay, workoutSets]);
+    saveDraftForDay(selectedDay, workoutSets, workout);
+  }, [selectedDay, workout, workoutSets]);
 
   useEffect(() => {
     if (!user || !hasLoadedRemoteDrafts) {
@@ -438,7 +703,10 @@ function Workout() {
       try {
         setDraftSaveStatus("saving");
 
-        if (!selectedDayHasEntries) {
+        if (
+          !selectedDayHasEntries &&
+          !selectedWorkoutChanged
+        ) {
           await deleteWorkoutDraft({
             userId: user.id,
             workoutDay: selectedDay,
@@ -455,11 +723,12 @@ function Workout() {
 
         const savedDraft = await upsertWorkoutDraft({
           userId: user.id,
-          workoutDay: selectedDay,
-          workoutName: workout.name,
-          workoutKey: selectedWorkoutKey,
-          workoutSets,
-        });
+        workoutDay: selectedDay,
+        workoutName: workout.name,
+        workoutKey: selectedWorkoutKey,
+        workout,
+        workoutSets,
+      });
 
         setRemoteDraftsByDay((current) => ({
           ...current,
@@ -477,9 +746,10 @@ function Workout() {
     hasLoadedRemoteDrafts,
     selectedDay,
     selectedDayHasEntries,
+    selectedWorkoutChanged,
     selectedWorkoutKey,
     user,
-    workout.name,
+    workout,
     workoutSets,
   ]);
 
@@ -499,10 +769,14 @@ function Workout() {
   const changeWorkoutDay = (day) => {
     const nextWorkoutKey =
       workoutSchedule[day] ?? defaultWorkoutSchedule[day];
-    const nextWorkout = workoutProgram[nextWorkoutKey];
+    const baseNextWorkout = workoutProgram[nextWorkoutKey];
     const remoteDraft = remoteDraftsByDay[day];
+    const nextWorkout = remoteDraft
+      ? getWorkoutFromDraft(remoteDraft, baseNextWorkout)
+      : getLocalWorkoutForDay(day, baseNextWorkout);
 
     setSelectedDay(day);
+    setCustomWorkout(nextWorkout);
     setWorkoutSets(
       remoteDraft
         ? getWorkoutStateFromDraft(remoteDraft, nextWorkout)
@@ -518,6 +792,118 @@ function Workout() {
       [exerciseId]: sets,
     }));
   };
+
+  const closeExerciseEditor = () => {
+    setExerciseEditorMode(null);
+    setEditingExercise(null);
+    setExerciseForm(DEFAULT_EXERCISE_FORM);
+    setExerciseFormError("");
+  };
+
+  const updateExerciseForm = (field, value) => {
+    setExerciseForm((current) => ({
+      ...current,
+      [field]: value,
+    }));
+    setExerciseFormError("");
+  };
+
+  const openEditExercise = (exercise) => {
+    setExerciseEditorMode("edit");
+    setEditingExercise(exercise);
+    setExerciseForm(getExerciseFormFromExercise(exercise));
+    setExerciseFormError("");
+  };
+
+  const openAddExercise = () => {
+    setExerciseEditorMode("add");
+    setEditingExercise(null);
+    setExerciseForm(DEFAULT_EXERCISE_FORM);
+    setExerciseFormError("");
+  };
+
+  const submitExerciseEditor = (event) => {
+    event.preventDefault();
+
+    let normalizedExercise;
+
+    try {
+      normalizedExercise = normalizeExerciseForm(exerciseForm);
+    } catch (error) {
+      setExerciseFormError(error.message);
+      return;
+    }
+
+    if (exerciseEditorMode === "edit" && editingExercise) {
+      const updatedExercise = {
+        ...editingExercise,
+        ...normalizedExercise,
+      };
+
+      setCustomWorkout((current) => ({
+        ...current,
+        exercises: current.exercises.map((item) =>
+          item.id === editingExercise.id
+            ? updatedExercise
+            : item,
+        ),
+      }));
+      setWorkoutSets((current) => ({
+        ...current,
+        [editingExercise.id]: resizeExerciseSets(
+          current[editingExercise.id],
+          normalizedExercise.sets,
+        ),
+      }));
+      setStatusMessage("Exercise updated for this workout.");
+    }
+
+    if (exerciseEditorMode === "add") {
+      const exercise = {
+        id: `custom-${crypto.randomUUID()}`,
+        ...normalizedExercise,
+        custom: true,
+      };
+
+      setCustomWorkout((current) => ({
+        ...current,
+        exercises: [...current.exercises, exercise],
+      }));
+      setWorkoutSets((current) => ({
+        ...current,
+        [exercise.id]: createExerciseSets(exercise),
+      }));
+      setStatusMessage("Exercise added for this workout.");
+    }
+
+    setErrorMessage("");
+    closeExerciseEditor();
+  };
+
+  const skipExercise = (exercise) => {
+    const confirmed = window.confirm(
+      `Skip ${exercise.name} for this workout?`,
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    setCustomWorkout((current) => ({
+      ...current,
+      exercises: current.exercises.filter(
+        (item) => item.id !== exercise.id,
+      ),
+    }));
+    setWorkoutSets((current) => {
+      const nextSets = { ...current };
+      delete nextSets[exercise.id];
+      return nextSets;
+    });
+    setStatusMessage("Exercise skipped for this workout.");
+    setErrorMessage("");
+  };
+
 
   const toggleCompletionExercise = (exerciseId) => {
     setWorkoutSets((current) => {
@@ -550,7 +936,8 @@ function Workout() {
     }
 
     clearDraftForDay(selectedDay);
-    setWorkoutSets(createWorkoutState(workout));
+    setCustomWorkout(baseWorkout);
+    setWorkoutSets(createWorkoutState(baseWorkout));
     setRemoteDraftsByDay((current) => {
       const nextDrafts = { ...current };
       delete nextDrafts[selectedDay];
@@ -645,7 +1032,8 @@ function Workout() {
         nextDays.add(selectedDay);
         return nextDays;
       });
-      setWorkoutSets(createWorkoutState(workout));
+      setCustomWorkout(baseWorkout);
+      setWorkoutSets(createWorkoutState(baseWorkout));
       setStatusMessage(
         sharedGroupCount > 0
           ? `Workout finished and shared to ${sharedGroupCount} group${
@@ -719,6 +1107,7 @@ function Workout() {
     () => history,
     [history],
   );
+  const selectedDayFinished = finishedDays.has(selectedDay);
   const getDayState = (day) => {
     if (finishedDays.has(day)) {
       return "finished";
@@ -726,6 +1115,7 @@ function Workout() {
 
     if (
       (day === selectedDay && selectedDayHasEntries) ||
+      (day === selectedDay && selectedWorkoutChanged) ||
       remoteDraftsByDay[day] ||
       localDraftDays.has(day)
     ) {
@@ -736,7 +1126,11 @@ function Workout() {
   };
 
   const draftStatusText = {
-    idle: selectedDayHasEntries
+    idle: selectedDayFinished
+      ? "Completed this week"
+      : selectedDayHasEntries
+      ? "Draft saved locally"
+      : selectedWorkoutChanged
       ? "Draft saved locally"
       : "Not started",
     saving: "Saving draft...",
@@ -769,7 +1163,9 @@ function Workout() {
           <button
             type="button"
             className="primary-action-button"
-            disabled={isSaving || isAuthLoading}
+            disabled={
+              isSaving || isAuthLoading || selectedDayFinished
+            }
             onClick={handleFinishWorkout}
           >
             {isSaving ? (
@@ -781,7 +1177,11 @@ function Workout() {
               <Check size={17} />
             )}
 
-            {isSaving ? "Finishing…" : "Finish workout"}
+            {selectedDayFinished
+              ? "Finished"
+              : isSaving
+              ? "Finishing…"
+              : "Finish workout"}
           </button>
         </div>
       </section>
@@ -851,7 +1251,9 @@ function Workout() {
         <div>
           <span>Workout progress</span>
           <strong>
-            {isCompletionWorkout
+            {selectedDayFinished
+              ? "Workout finished"
+              : isCompletionWorkout
               ? completedSets > 0
                 ? "Walk completed"
                 : "Walk not logged yet"
@@ -949,9 +1351,22 @@ function Workout() {
                   sets,
                 )
               }
+              onEdit={() => openEditExercise(exercise)}
+              onSkip={() => skipExercise(exercise)}
             />
           );
         })}
+
+        {!isCompletionWorkout && (
+          <button
+            type="button"
+            className="secondary-button workout-page__add-exercise"
+            onClick={openAddExercise}
+          >
+            <Plus size={17} />
+            Add exercise
+          </button>
+        )}
       </section>
 
       <section className="workout-history">
@@ -1116,6 +1531,15 @@ function Workout() {
           </div>
         )}
       </section>
+
+      <ExerciseEditorModal
+        mode={exerciseEditorMode}
+        form={exerciseForm}
+        error={exerciseFormError}
+        onChange={updateExerciseForm}
+        onClose={closeExerciseEditor}
+        onSubmit={submitExerciseEditor}
+      />
     </div>
   );
 }

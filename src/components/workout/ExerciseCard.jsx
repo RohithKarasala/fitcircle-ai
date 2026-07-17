@@ -1,4 +1,10 @@
-import { ChevronDown, ChevronUp, Plus, Trash2 } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronUp,
+  Pencil,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { useState } from "react";
 
 function createSet(setNumber) {
@@ -17,6 +23,8 @@ function ExerciseCard({
   previousSets,
   showRir = false,
   onSetsChange,
+  onEdit,
+  onSkip,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
 
@@ -76,7 +84,63 @@ function ExerciseCard({
           </p>
         </div>
 
-        {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+        <div className="exercise-card__header-actions">
+          {onEdit && (
+            <span
+              className="exercise-card__icon-action"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                event.stopPropagation();
+                onEdit();
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" ||
+                  event.key === " "
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onEdit();
+                }
+              }}
+            >
+              <Pencil size={16} />
+              <span className="sr-only">Edit exercise</span>
+            </span>
+          )}
+
+          {onSkip && (
+            <span
+              className="exercise-card__icon-action exercise-card__icon-action--danger"
+              role="button"
+              tabIndex={0}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSkip();
+              }}
+              onKeyDown={(event) => {
+                if (
+                  event.key === "Enter" ||
+                  event.key === " "
+                ) {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  onSkip();
+                }
+              }}
+            >
+              <Trash2 size={16} />
+              <span className="sr-only">Skip exercise</span>
+            </span>
+          )}
+
+          {isExpanded ? (
+            <ChevronUp size={20} />
+          ) : (
+            <ChevronDown size={20} />
+          )}
+        </div>
       </button>
 
       {isExpanded && (

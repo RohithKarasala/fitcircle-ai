@@ -329,6 +329,7 @@ export async function upsertWorkoutDraft({
   workoutDay,
   workoutName,
   workoutKey,
+  workout,
   workoutSets,
 }) {
   if (!userId) {
@@ -346,6 +347,7 @@ export async function upsertWorkoutDraft({
         workout_name: workoutName,
         workout_key: workoutKey,
         workout_payload: {
+          workout,
           workoutSets,
         },
         updated_at: updatedAt,
