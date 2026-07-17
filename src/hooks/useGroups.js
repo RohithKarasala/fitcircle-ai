@@ -18,6 +18,7 @@ import {
   renameGroup,
   shareWorkoutWithGroup,
   unshareWorkoutFromGroup,
+  updateGroupAutoShare,
   updateCurrentUserProfile,
 } from "../services/groups";
 
@@ -242,6 +243,26 @@ export function useUpdateCurrentUserProfile() {
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: groupQueryKeys.all,
+      });
+    },
+  });
+}
+
+export function useUpdateGroupAutoShare() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateGroupAutoShare,
+
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({
+        queryKey: groupQueryKeys.list(),
+      });
+
+      queryClient.invalidateQueries({
+        queryKey: groupQueryKeys.detail(
+          variables.groupId
+        ),
       });
     },
   });

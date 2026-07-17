@@ -216,7 +216,8 @@ export async function joinGroup(inviteCode) {
  *   createdAt: string,
  *   updatedAt: string,
  *   role: "owner" | "member",
- *   joinedAt: string
+ *   joinedAt: string,
+ *   autoShareWorkouts: boolean
  * }>>}
  */
 export async function getUserGroups() {
@@ -229,6 +230,7 @@ export async function getUserGroups() {
       group_id,
       role,
       joined_at,
+      auto_share_workouts,
       groups (
         id,
         name,
@@ -264,6 +266,9 @@ export async function getUserGroups() {
         updatedAt: group.updated_at,
         role: membership.role,
         joinedAt: membership.joined_at,
+        autoShareWorkouts: Boolean(
+          membership.auto_share_workouts
+        ),
       };
     });
 }
@@ -280,7 +285,8 @@ export async function getUserGroups() {
  *   createdAt: string,
  *   updatedAt: string,
  *   role: "owner" | "member",
- *   joinedAt: string
+ *   joinedAt: string,
+ *   autoShareWorkouts: boolean
  * }>}
  */
 export async function getGroupById(groupId) {
@@ -293,6 +299,7 @@ export async function getGroupById(groupId) {
     .select(`
       role,
       joined_at,
+      auto_share_workouts,
       groups (
         id,
         name,
@@ -330,7 +337,36 @@ export async function getGroupById(groupId) {
     updatedAt: group.updated_at,
     role: membership.role,
     joinedAt: membership.joined_at,
+    autoShareWorkouts: Boolean(
+      membership.auto_share_workouts
+    ),
   };
+}
+
+export async function updateGroupAutoShare({
+  groupId,
+  enabled,
+}) {
+  await requireAuthenticatedUser();
+
+  const cleanedGroupId = requireString(groupId, "Group ID");
+
+  const { data, error } = await supabase.rpc(
+    "update_group_auto_share",
+    {
+      p_group_id: cleanedGroupId,
+      p_enabled: Boolean(enabled),
+    }
+  );
+
+  if (error) {
+    throw createServiceError(
+      error,
+      "Unable to update auto-share."
+    );
+  }
+
+  return Boolean(data);
 }
 
 /**

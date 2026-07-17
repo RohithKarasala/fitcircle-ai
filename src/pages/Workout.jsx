@@ -239,7 +239,7 @@ function Workout() {
     setErrorMessage("");
 
     try {
-      await saveWorkoutSession({
+      const savedSession = await saveWorkoutSession({
         userId: user.id,
         workoutDay: selectedDay,
         workoutName: workout.name,
@@ -247,13 +247,49 @@ function Workout() {
         workoutSets,
       });
 
+      const autoShareGroups = groups.filter(
+        (group) => group.autoShareWorkouts,
+      );
+      let sharedGroupCount = autoShareGroups.length;
+      let failedShareCount = 0;
+
+      if (autoShareGroups.length > 0) {
+        const shareResults = await Promise.allSettled(
+          autoShareGroups.map((group) =>
+            shareWorkoutMutation.mutateAsync({
+              workoutSessionId: savedSession.id,
+              groupId: group.groupId,
+              workoutDate:
+                savedSession.workout_date ??
+                new Date().toISOString(),
+            }),
+          ),
+        );
+
+        failedShareCount = shareResults.filter(
+          (result) => result.status === "rejected",
+        ).length;
+        sharedGroupCount =
+          autoShareGroups.length - failedShareCount;
+      }
+
       clearDraftForDay(selectedDay);
       setWorkoutSets(createWorkoutState(workout));
       setStatusMessage(
-        "Workout saved securely to Supabase.",
+        sharedGroupCount > 0
+          ? `Workout saved and shared to ${sharedGroupCount} group${
+              sharedGroupCount === 1 ? "" : "s"
+            }.`
+          : "Workout saved securely to Supabase.",
       );
 
       await loadHistory();
+
+      if (failedShareCount > 0) {
+        setErrorMessage(
+          "Workout saved, but auto-sharing failed for one or more groups.",
+        );
+      }
     } catch (error) {
       console.error(error);
       setErrorMessage(error.message);

@@ -2,14 +2,32 @@ import {
   ArrowRight,
   CalendarDays,
   Dumbbell,
+  LoaderCircle,
+  Pencil,
   Flame,
+  Save,
   Scale,
+  X,
 } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
+import {
+  getCurrentUserProfile,
+  updateCurrentWeight,
+} from "../services/profile";
 
 function Dashboard() {
   const { user } = useAuth();
+  const [currentWeight, setCurrentWeight] = useState(null);
+  const [weightInput, setWeightInput] = useState("");
+  const [isEditingWeight, setIsEditingWeight] =
+    useState(false);
+  const [isWeightLoading, setIsWeightLoading] =
+    useState(false);
+  const [isWeightSaving, setIsWeightSaving] =
+    useState(false);
+  const [weightError, setWeightError] = useState("");
 
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -24,6 +42,82 @@ function Dashboard() {
     "there";
 
   const firstName = displayName.split(" ")[0];
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadProfile() {
+      if (!user) {
+        setCurrentWeight(null);
+        setWeightInput("");
+        return;
+      }
+
+      setIsWeightLoading(true);
+      setWeightError("");
+
+      try {
+        const profile = await getCurrentUserProfile(user.id);
+
+        if (!isCurrent) {
+          return;
+        }
+
+        const nextWeight = profile?.currentWeightLb ?? null;
+
+        setCurrentWeight(nextWeight);
+        setWeightInput(
+          nextWeight === null ? "" : String(nextWeight),
+        );
+      } catch (error) {
+        if (isCurrent) {
+          setWeightError(error.message);
+        }
+      } finally {
+        if (isCurrent) {
+          setIsWeightLoading(false);
+        }
+      }
+    }
+
+    loadProfile();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user]);
+
+  async function handleSaveWeight(event) {
+    event.preventDefault();
+
+    setIsWeightSaving(true);
+    setWeightError("");
+
+    try {
+      const nextWeight = await updateCurrentWeight({
+        user,
+        weight: weightInput,
+      });
+
+      setCurrentWeight(nextWeight);
+      setWeightInput(
+        nextWeight === null ? "" : String(nextWeight),
+      );
+      setIsEditingWeight(false);
+    } catch (error) {
+      setWeightError(error.message);
+    } finally {
+      setIsWeightSaving(false);
+    }
+  }
+
+  function handleCancelWeightEdit() {
+    setWeightInput(
+      currentWeight === null ? "" : String(currentWeight),
+    );
+    setWeightError("");
+    setIsEditingWeight(false);
+  }
 
   return (
     <div className="page">
@@ -77,8 +171,94 @@ function Dashboard() {
           </div>
 
           <span>Current weight</span>
-          <strong>159.0 lb</strong>
-          <small>Update your latest measurement</small>
+
+          {!isEditingWeight ? (
+            <>
+              <strong>
+                {isWeightLoading ? (
+                  <LoaderCircle
+                    className="spin"
+                    size={24}
+                  />
+                ) : currentWeight === null ? (
+                  "Not set"
+                ) : (
+                  `${currentWeight.toFixed(1)} lb`
+                )}
+              </strong>
+
+              <button
+                type="button"
+                className="stat-card__edit"
+                disabled={!user || isWeightLoading}
+                onClick={() => setIsEditingWeight(true)}
+              >
+                <Pencil size={15} />
+                {currentWeight === null ? "Add weight" : "Edit"}
+              </button>
+
+              <small>
+                {user
+                  ? "Update your latest measurement"
+                  : "Sign in to save your weight"}
+              </small>
+            </>
+          ) : (
+            <form
+              className="stat-card__weight-form"
+              onSubmit={handleSaveWeight}
+            >
+              <label>
+                <span className="sr-only">
+                  Current weight in pounds
+                </span>
+                <input
+                  type="number"
+                  min="40"
+                  max="900"
+                  step="0.1"
+                  inputMode="decimal"
+                  value={weightInput}
+                  placeholder="159.0"
+                  onChange={(event) =>
+                    setWeightInput(event.target.value)
+                  }
+                />
+              </label>
+
+              <div className="stat-card__weight-actions">
+                <button
+                  type="submit"
+                  disabled={isWeightSaving}
+                  aria-label="Save current weight"
+                >
+                  {isWeightSaving ? (
+                    <LoaderCircle
+                      className="spin"
+                      size={16}
+                    />
+                  ) : (
+                    <Save size={16} />
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isWeightSaving}
+                  aria-label="Cancel weight edit"
+                  onClick={handleCancelWeightEdit}
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            </form>
+          )}
+
+          {weightError && (
+            <small className="stat-card__error">
+              {weightError}
+            </small>
+          )}
         </article>
 
         <article className="card stat-card">

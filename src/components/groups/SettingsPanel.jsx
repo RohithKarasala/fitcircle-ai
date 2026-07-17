@@ -16,6 +16,7 @@ import {
   useLeaveGroup,
   useRegenerateGroupInviteCode,
   useRenameGroup,
+  useUpdateGroupAutoShare,
   useUpdateCurrentUserProfile,
 } from "../../hooks/useGroups";
 
@@ -47,6 +48,8 @@ function SettingsPanel({
     useState(initialDisplayName);
 
   const renameMutation = useRenameGroup();
+  const updateAutoShareMutation =
+    useUpdateGroupAutoShare();
   const updateProfileMutation = useUpdateCurrentUserProfile();
   const regenerateInviteMutation =
     useRegenerateGroupInviteCode();
@@ -84,6 +87,24 @@ function SettingsPanel({
         displayName: profileName.trim(),
       });
       onNotice("Display name updated.");
+    } catch (error) {
+      onError(error);
+    }
+  }
+
+  async function handleAutoShareChange(event) {
+    const enabled = event.target.checked;
+
+    try {
+      await updateAutoShareMutation.mutateAsync({
+        groupId: group.id,
+        enabled,
+      });
+      onNotice(
+        enabled
+          ? "Future workouts will auto-share to this group."
+          : "Auto-share disabled for this group.",
+      );
     } catch (error) {
       onError(error);
     }
@@ -200,6 +221,31 @@ function SettingsPanel({
       </Card>
 
       <Card className="group-settings__card">
+        <h2>Workout sharing</h2>
+        <p>
+          Automatically share future saved workouts to this
+          group feed.
+        </p>
+
+        <label className="group-settings__toggle">
+          <span>
+            <strong>Auto-share saved workouts</strong>
+            <small>
+              This only affects workouts you save after
+              turning it on.
+            </small>
+          </span>
+
+          <input
+            type="checkbox"
+            checked={Boolean(group.autoShareWorkouts)}
+            disabled={updateAutoShareMutation.isPending}
+            onChange={handleAutoShareChange}
+          />
+        </label>
+      </Card>
+
+      <Card className="group-settings__card">
         <h2>Group name</h2>
         <p>
           Rename this group for every member. Keep it short
@@ -310,6 +356,7 @@ SettingsPanel.propTypes = {
     id: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
     inviteCode: PropTypes.string,
+    autoShareWorkouts: PropTypes.bool,
   }).isRequired,
   currentUser: PropTypes.shape({
     email: PropTypes.string,
