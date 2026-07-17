@@ -40,6 +40,22 @@ function requireString(value, fieldName) {
   return value.trim();
 }
 
+function normalizeDateOnly(value, fieldName) {
+  const cleanedValue = requireString(value, fieldName);
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(cleanedValue)) {
+    return cleanedValue;
+  }
+
+  const date = new Date(cleanedValue);
+
+  if (Number.isNaN(date.getTime())) {
+    throw new Error(`${fieldName} must be a valid date.`);
+  }
+
+  return date.toISOString().slice(0, 10);
+}
+
 /**
  * Verifies that the current user has an authenticated Supabase session.
  *
@@ -494,16 +510,10 @@ export async function shareWorkoutWithGroup({
   );
 
   const cleanedGroupId = requireString(groupId, "Group ID");
-  const cleanedWorkoutDate = requireString(
+  const cleanedWorkoutDate = normalizeDateOnly(
     workoutDate,
     "Workout date"
   );
-
-  const parsedDate = new Date(`${cleanedWorkoutDate}T00:00:00`);
-
-  if (Number.isNaN(parsedDate.getTime())) {
-    throw new Error("Workout date must use the YYYY-MM-DD format.");
-  }
 
   const cleanedMessage =
     typeof message === "string" && message.trim()

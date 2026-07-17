@@ -903,6 +903,32 @@ a {
   font-size: 0.75rem;
 }
 
+.workout-history__share {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.workout-history__share select {
+  width: 100%;
+  min-width: 0;
+  padding: 9px 10px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.workout-history__share select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
+.workout-history__share .secondary-button {
+  width: 100%;
+}
+
 .workout-history__exercises {
   display: grid;
   gap: 11px;

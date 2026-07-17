@@ -5,6 +5,7 @@ import {
   LogIn,
   RotateCcw,
   Save,
+  Share2,
 } from "lucide-react";
 import {
   useCallback,
@@ -24,6 +25,10 @@ import {
   getUserWorkoutHistory,
   saveWorkoutSession,
 } from "../services/workouts";
+import {
+  useGroups,
+  useShareWorkout,
+} from "../hooks/useGroups";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
 
@@ -117,10 +122,22 @@ function Workout() {
   const [isHistoryLoading, setIsHistoryLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [sharingSessionId, setSharingSessionId] =
+    useState("");
+  const [shareGroupIds, setShareGroupIds] = useState({});
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
   const workout = workoutProgram[selectedDay];
+
+  const {
+    data: groups = [],
+    isLoading: isGroupsLoading,
+  } = useGroups({
+    enabled: Boolean(user),
+  });
+
+  const shareWorkoutMutation = useShareWorkout();
 
   const loadHistory = useCallback(async () => {
     if (!user) {
@@ -242,6 +259,50 @@ function Workout() {
       setErrorMessage(error.message);
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleShareWorkout = async (session) => {
+    if (!user) {
+      setErrorMessage(
+        "Sign in with Google before sharing your workout.",
+      );
+      return;
+    }
+
+    const groupId =
+      shareGroupIds[session.id] ?? groups[0]?.groupId;
+
+    if (!groupId) {
+      setErrorMessage(
+        "Create or join a group before sharing workouts.",
+      );
+      return;
+    }
+
+    const group = groups.find(
+      (item) => item.groupId === groupId,
+    );
+
+    setSharingSessionId(session.id);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      await shareWorkoutMutation.mutateAsync({
+        workoutSessionId: session.id,
+        groupId,
+        workoutDate: session.date,
+      });
+
+      setStatusMessage(
+        `Shared workout to ${group?.name ?? "your group"}.`,
+      );
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    } finally {
+      setSharingSessionId("");
     }
   };
 
@@ -462,8 +523,76 @@ function Workout() {
                         },
                       ).format(
                         new Date(session.date),
-                      )}
+                        )}
                     </span>
+
+                    {user && (
+                      <div className="workout-history__share">
+                        <select
+                          aria-label="Choose group to share this workout"
+                          value={
+                            shareGroupIds[session.id] ??
+                            groups[0]?.groupId ??
+                            ""
+                          }
+                          disabled={
+                            isGroupsLoading ||
+                            sharingSessionId ===
+                              session.id ||
+                            groups.length === 0
+                          }
+                          onChange={(event) =>
+                            setShareGroupIds(
+                              (current) => ({
+                                ...current,
+                                [session.id]:
+                                  event.target.value,
+                              }),
+                            )
+                          }
+                        >
+                          {groups.length === 0 ? (
+                            <option value="">
+                              No groups yet
+                            </option>
+                          ) : (
+                            groups.map((group) => (
+                              <option
+                                key={group.groupId}
+                                value={group.groupId}
+                              >
+                                {group.name}
+                              </option>
+                            ))
+                          )}
+                        </select>
+
+                        <button
+                          type="button"
+                          className="secondary-button"
+                          disabled={
+                            isGroupsLoading ||
+                            sharingSessionId ===
+                              session.id ||
+                            groups.length === 0
+                          }
+                          onClick={() =>
+                            handleShareWorkout(session)
+                          }
+                        >
+                          {sharingSessionId ===
+                          session.id ? (
+                            <LoaderCircle
+                              className="spin"
+                              size={16}
+                            />
+                          ) : (
+                            <Share2 size={16} />
+                          )}
+                          Share
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   <div className="workout-history__exercises">

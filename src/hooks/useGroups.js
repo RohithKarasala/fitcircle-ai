@@ -49,10 +49,11 @@ export const groupQueryKeys = {
   ],
 };
 
-export function useGroups() {
+export function useGroups(options = {}) {
   return useQuery({
     queryKey: groupQueryKeys.list(),
     queryFn: getUserGroups,
+    ...options,
   });
 }
 
