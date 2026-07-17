@@ -837,7 +837,10 @@ a {
   }
 
   .set-table__header {
-    display: none;
+    grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 30px;
+    gap: 6px;
+    padding: 0 8px 7px;
+    font-size: 0.62rem;
   }
 
   .set-row {
