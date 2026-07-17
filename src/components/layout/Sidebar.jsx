@@ -7,9 +7,11 @@ import {
   LogOut,
   MessageCircleHeart,
   Settings,
+  Users,
   Utensils,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+
 import { useAuth } from "../../context/useAuth";
 
 const navigation = [
@@ -22,6 +24,11 @@ const navigation = [
     label: "Workout",
     path: "/workout",
     icon: Dumbbell,
+  },
+  {
+    label: "Groups",
+    path: "/groups",
+    icon: Users,
   },
   {
     label: "Progress",
@@ -116,7 +123,7 @@ function Sidebar() {
               }`
             }
           >
-            <Icon size={19} />
+            <Icon size={19} aria-hidden="true" />
             <span>{label}</span>
           </NavLink>
         ))}
@@ -154,7 +161,7 @@ function Sidebar() {
               title="Sign out"
               onClick={handleSignOut}
             >
-              <LogOut size={17} />
+              <LogOut size={17} aria-hidden="true" />
             </button>
           </>
         ) : (
@@ -163,7 +170,7 @@ function Sidebar() {
             className="sidebar__google-button"
             onClick={handleGoogleSignIn}
           >
-            <LogIn size={17} />
+            <LogIn size={17} aria-hidden="true" />
             Continue with Google
           </button>
         )}
