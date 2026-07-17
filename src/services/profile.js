@@ -29,7 +29,7 @@ export async function getCurrentUserProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, avatar_url, current_weight_lb, workout_schedule",
+      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -49,6 +49,7 @@ export async function getCurrentUserProfile(userId) {
     workoutSchedule: normalizeWorkoutSchedule(
       data.workout_schedule,
     ),
+    trackRir: Boolean(data.track_rir),
     currentWeightLb:
       data.current_weight_lb === null ||
       data.current_weight_lb === undefined
@@ -61,6 +62,7 @@ export async function updateProfileSettings({
   user,
   displayName,
   workoutSchedule,
+  trackRir,
 }) {
   if (!user) {
     throw new Error("Sign in before updating settings.");
@@ -95,13 +97,16 @@ export async function updateProfileSettings({
         display_name: cleanedDisplayName,
         avatar_url: avatarUrl,
         workout_schedule: normalizedSchedule,
+        track_rir: Boolean(trackRir),
         updated_at: new Date().toISOString(),
       },
       {
         onConflict: "id",
       },
     )
-    .select("id, display_name, avatar_url, current_weight_lb, workout_schedule")
+    .select(
+      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir",
+    )
     .single();
 
   if (error) {
@@ -115,6 +120,7 @@ export async function updateProfileSettings({
     workoutSchedule: normalizeWorkoutSchedule(
       data.workout_schedule,
     ),
+    trackRir: Boolean(data.track_rir),
     currentWeightLb:
       data.current_weight_lb === null ||
       data.current_weight_lb === undefined

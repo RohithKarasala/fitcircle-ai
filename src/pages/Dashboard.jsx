@@ -39,6 +39,7 @@ function Dashboard() {
   const [workoutSchedule, setWorkoutSchedule] = useState(
     defaultWorkoutSchedule,
   );
+  const [trackRir, setTrackRir] = useState(false);
 
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -69,6 +70,7 @@ function Dashboard() {
         setWeightInput("");
         setProfileDisplayName("");
         setWorkoutSchedule(defaultWorkoutSchedule);
+        setTrackRir(false);
         return;
       }
 
@@ -91,6 +93,7 @@ function Dashboard() {
               defaultWorkoutSchedule,
           ),
         );
+        setTrackRir(Boolean(profile?.trackRir));
         setCurrentWeight(nextWeight);
         setWeightInput(
           nextWeight === null ? "" : String(nextWeight),
@@ -184,7 +187,11 @@ function Dashboard() {
             <div>
               <span>Target effort</span>
               <strong>
-                {isRecoveryWorkout ? "Easy pace" : "1–2 RIR"}
+                {isRecoveryWorkout
+                  ? "Easy pace"
+                  : trackRir
+                    ? "1–2 RIR"
+                    : "Controlled"}
               </strong>
             </div>
           </div>

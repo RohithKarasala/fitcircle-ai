@@ -128,6 +128,7 @@ function Workout() {
   const [sharingSessionId, setSharingSessionId] =
     useState("");
   const [shareGroupIds, setShareGroupIds] = useState({});
+  const [trackRir, setTrackRir] = useState(false);
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const appliedScheduleUserIdRef = useRef("");
@@ -147,10 +148,12 @@ function Workout() {
     let isCurrent = true;
 
     async function loadScheduledDay() {
-      if (
-        !user ||
-        appliedScheduleUserIdRef.current === user.id
-      ) {
+      if (!user) {
+        setTrackRir(false);
+        return;
+      }
+
+      if (appliedScheduleUserIdRef.current === user.id) {
         return;
       }
 
@@ -166,6 +169,7 @@ function Workout() {
         );
         const scheduledDay = getTodayWorkoutKey(schedule);
 
+        setTrackRir(Boolean(profile?.trackRir));
         setSelectedDay(scheduledDay);
         setWorkoutSets(
           getDraftForDay(
@@ -178,6 +182,7 @@ function Workout() {
         console.error(error);
 
         if (isCurrent) {
+          setTrackRir(false);
           appliedScheduleUserIdRef.current = user.id;
         }
       }
@@ -545,6 +550,7 @@ function Workout() {
               previousSets={
                 previousExercise?.sets ?? []
               }
+              showRir={trackRir}
               onSetsChange={(sets) =>
                 updateExerciseSets(
                   exercise.id,
@@ -701,6 +707,7 @@ function Workout() {
                                   } lb × ${
                                     set.reps || "—"
                                   }${
+                                    trackRir &&
                                     set.rir !== ""
                                       ? ` · ${set.rir} RIR`
                                       : ""

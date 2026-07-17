@@ -15,6 +15,7 @@ function ExerciseCard({
   exercise,
   sets,
   previousSets,
+  showRir = false,
   onSetsChange,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -90,19 +91,25 @@ function ExerciseCard({
                 {previousSets.map((set) => (
                   <small key={set.setNumber}>
                     {set.weight || "—"} lb × {set.reps || "—"}
-                    {set.rir !== "" ? ` · ${set.rir} RIR` : ""}
+                    {showRir && set.rir !== ""
+                      ? ` · ${set.rir} RIR`
+                      : ""}
                   </small>
                 ))}
               </div>
             </div>
           )}
 
-          <div className="set-table">
+          <div
+            className={`set-table ${
+              showRir ? "" : "set-table--no-rir"
+            }`}
+          >
             <div className="set-table__header">
               <span>Set</span>
               <span>Weight</span>
               <span>Reps</span>
-              <span>RIR</span>
+              {showRir && <span>RIR</span>}
               <span />
             </div>
 
@@ -148,23 +155,25 @@ function ExerciseCard({
                   />
                 </label>
 
-                <label>
-                  <span className="sr-only">
-                    Set {set.setNumber} repetitions in reserve
-                  </span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="10"
-                    step="1"
-                    inputMode="numeric"
-                    value={set.rir}
-                    placeholder="2"
-                    onChange={(event) =>
-                      updateSet(set.id, "rir", event.target.value)
-                    }
-                  />
-                </label>
+                {showRir && (
+                  <label>
+                    <span className="sr-only">
+                      Set {set.setNumber} repetitions in reserve
+                    </span>
+                    <input
+                      type="number"
+                      min="0"
+                      max="10"
+                      step="1"
+                      inputMode="numeric"
+                      value={set.rir}
+                      placeholder="2"
+                      onChange={(event) =>
+                        updateSet(set.id, "rir", event.target.value)
+                      }
+                    />
+                  </label>
+                )}
 
                 <button
                   type="button"

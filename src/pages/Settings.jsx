@@ -2,6 +2,7 @@ import {
   Check,
   LogIn,
   Save,
+  CircleAlert,
   User,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -37,17 +38,47 @@ function getAuthDisplayName(user) {
   );
 }
 
+function createSettingsSnapshot({
+  displayName,
+  schedule,
+  trackRir,
+}) {
+  return JSON.stringify({
+    displayName: displayName.trim(),
+    schedule: normalizeWorkoutSchedule(schedule),
+    trackRir: Boolean(trackRir),
+  });
+}
+
 function Settings() {
   const { user, isLoading, signInWithGoogle } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [schedule, setSchedule] = useState(
     defaultWorkoutSchedule,
   );
+  const [trackRir, setTrackRir] = useState(false);
   const [isProfileLoading, setIsProfileLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [notice, setNotice] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [savedSettingsSnapshot, setSavedSettingsSnapshot] =
+    useState(
+      createSettingsSnapshot({
+        displayName: "",
+        schedule: defaultWorkoutSchedule,
+        trackRir: false,
+      }),
+    );
+
+  const currentSettingsSnapshot = createSettingsSnapshot({
+    displayName,
+    schedule,
+    trackRir,
+  });
+
+  const hasUnsavedChanges =
+    currentSettingsSnapshot !== savedSettingsSnapshot;
 
   useEffect(() => {
     let isCurrent = true;
@@ -56,6 +87,14 @@ function Settings() {
       if (!user) {
         setDisplayName("");
         setSchedule(defaultWorkoutSchedule);
+        setTrackRir(false);
+        setSavedSettingsSnapshot(
+          createSettingsSnapshot({
+            displayName: "",
+            schedule: defaultWorkoutSchedule,
+            trackRir: false,
+          }),
+        );
         return;
       }
 
@@ -69,14 +108,23 @@ function Settings() {
           return;
         }
 
-        setDisplayName(
-          profile?.displayName || getAuthDisplayName(user),
+        const nextDisplayName =
+          profile?.displayName || getAuthDisplayName(user);
+        const nextSchedule = normalizeWorkoutSchedule(
+          profile?.workoutSchedule ??
+            defaultWorkoutSchedule,
         );
-        setSchedule(
-          normalizeWorkoutSchedule(
-            profile?.workoutSchedule ??
-              defaultWorkoutSchedule,
-          ),
+        const nextTrackRir = Boolean(profile?.trackRir);
+
+        setDisplayName(nextDisplayName);
+        setSchedule(nextSchedule);
+        setTrackRir(nextTrackRir);
+        setSavedSettingsSnapshot(
+          createSettingsSnapshot({
+            displayName: nextDisplayName,
+            schedule: nextSchedule,
+            trackRir: nextTrackRir,
+          }),
         );
       } catch (error) {
         if (isCurrent) {
@@ -108,10 +156,19 @@ function Settings() {
         user,
         displayName,
         workoutSchedule: schedule,
+        trackRir,
       });
 
       setDisplayName(profile.displayName);
       setSchedule(profile.workoutSchedule);
+      setTrackRir(Boolean(profile.trackRir));
+      setSavedSettingsSnapshot(
+        createSettingsSnapshot({
+          displayName: profile.displayName,
+          schedule: profile.workoutSchedule,
+          trackRir: Boolean(profile.trackRir),
+        }),
+      );
       setNotice("Settings saved.");
     } catch (error) {
       setErrorMessage(error.message);
@@ -201,6 +258,35 @@ function Settings() {
 
           <Card className="settings-page__card">
             <div className="settings-page__card-heading">
+              <h2>Workout logging</h2>
+              <p>
+                Keep the set table focused on the fields you
+                actually track.
+              </p>
+            </div>
+
+            <label className="settings-page__toggle">
+              <span>
+                <strong>Track RIR</strong>
+                <small>
+                  Show reps-in-reserve inputs on workout
+                  sets and history.
+                </small>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={trackRir}
+                disabled={isProfileLoading}
+                onChange={(event) =>
+                  setTrackRir(event.target.checked)
+                }
+              />
+            </label>
+          </Card>
+
+          <Card className="settings-page__card">
+            <div className="settings-page__card-heading">
               <h2>Workout schedule</h2>
               <p>
                 Choose which workout should appear for each
@@ -247,6 +333,13 @@ function Settings() {
             </div>
           )}
 
+          {hasUnsavedChanges && !notice && (
+            <div className="settings-page__unsaved">
+              <CircleAlert size={17} />
+              Unsaved changes
+            </div>
+          )}
+
           {errorMessage && (
             <div className="error-message">
               {errorMessage}
@@ -258,11 +351,15 @@ function Settings() {
               type="submit"
               loading={isSaving}
               disabled={
-                isProfileLoading || !displayName.trim()
+                isProfileLoading ||
+                !displayName.trim() ||
+                !hasUnsavedChanges
               }
             >
               <Save size={17} />
-              Save settings
+              {hasUnsavedChanges
+                ? "Save changes"
+                : "Settings saved"}
             </Button>
           </div>
         </form>
