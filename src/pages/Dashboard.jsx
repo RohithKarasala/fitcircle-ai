@@ -23,6 +23,20 @@ import {
   updateCurrentWeight,
 } from "../services/profile";
 
+function getTimeBasedGreeting(date = new Date()) {
+  const hour = date.getHours();
+
+  if (hour < 12) {
+    return "Good morning";
+  }
+
+  if (hour < 17) {
+    return "Good afternoon";
+  }
+
+  return "Good evening";
+}
+
 function Dashboard() {
   const { user } = useAuth();
   const [currentWeight, setCurrentWeight] = useState(null);
@@ -54,7 +68,7 @@ function Dashboard() {
     user?.email?.split("@")[0] ||
     "there";
 
-  const firstName = displayName.split(" ")[0];
+  const greeting = getTimeBasedGreeting();
   const todayWorkoutKey = getTodayWorkoutKey(workoutSchedule);
   const todayWorkout = workoutProgram[todayWorkoutKey];
   const isRecoveryWorkout =
@@ -154,7 +168,9 @@ function Dashboard() {
       <section className="page-heading">
         <div>
           <p className="eyebrow">{today}</p>
-          <h1>Good morning, {firstName}.</h1>
+          <h1>
+            {greeting}, {displayName}.
+          </h1>
           <p>Here is what you have planned for today.</p>
         </div>
       </section>
