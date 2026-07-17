@@ -1,22 +1,43 @@
-import { Check, RotateCcw, Save } from "lucide-react";
-import { useMemo, useState } from "react";
+import {
+  Check,
+  Cloud,
+  LoaderCircle,
+  LogIn,
+  RotateCcw,
+  Save,
+} from "lucide-react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import ExerciseCard from "../components/workout/ExerciseCard";
+import { useAuth } from "../context/useAuth";
 import {
   getTodayWorkoutKey,
   workoutDays,
   workoutProgram,
 } from "../data/workoutProgram";
+import {
+  ensureUserProfile,
+  getUserWorkoutHistory,
+  saveWorkoutSession,
+} from "../services/workouts";
 
-const STORAGE_KEY = "fitcircle-workout-history";
+const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
 
 function createExerciseSets(exercise) {
-  return Array.from({ length: exercise.sets }, (_, index) => ({
-    id: crypto.randomUUID(),
-    setNumber: index + 1,
-    weight: "",
-    reps: "",
-    rir: "",
-  }));
+  return Array.from(
+    { length: exercise.sets },
+    (_, index) => ({
+      id: crypto.randomUUID(),
+      setNumber: index + 1,
+      weight: "",
+      reps: "",
+      rir: "",
+    }),
+  );
 }
 
 function createWorkoutState(workout) {
@@ -28,57 +49,132 @@ function createWorkoutState(workout) {
   );
 }
 
-function getStoredHistory() {
+function getDrafts() {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY)) ?? [];
+    return (
+      JSON.parse(
+        localStorage.getItem(DRAFT_STORAGE_KEY),
+      ) ?? {}
+    );
   } catch {
-    return [];
+    return {};
   }
 }
 
-function hasLoggedSets(entry) {
-  return entry.exercises.some((exercise) =>
-    exercise.sets.some(
-      (set) => set.weight !== "" || set.reps !== "",
-    ),
+function getDraftForDay(day, workout) {
+  const drafts = getDrafts();
+  const draft = drafts[day];
+
+  if (!draft?.workoutSets) {
+    return createWorkoutState(workout);
+  }
+
+  return draft.workoutSets;
+}
+
+function saveDraftForDay(day, workoutSets) {
+  const drafts = getDrafts();
+
+  drafts[day] = {
+    savedAt: new Date().toISOString(),
+    workoutSets,
+  };
+
+  localStorage.setItem(
+    DRAFT_STORAGE_KEY,
+    JSON.stringify(drafts),
+  );
+}
+
+function clearDraftForDay(day) {
+  const drafts = getDrafts();
+
+  delete drafts[day];
+
+  localStorage.setItem(
+    DRAFT_STORAGE_KEY,
+    JSON.stringify(drafts),
   );
 }
 
 function Workout() {
+  const { user, isLoading: isAuthLoading, signInWithGoogle } =
+    useAuth();
+
   const initialDay = getTodayWorkoutKey();
 
-  const [selectedDay, setSelectedDay] = useState(initialDay);
+  const [selectedDay, setSelectedDay] =
+    useState(initialDay);
+
   const [workoutSets, setWorkoutSets] = useState(() =>
-    createWorkoutState(workoutProgram[initialDay]),
+    getDraftForDay(
+      initialDay,
+      workoutProgram[initialDay],
+    ),
   );
-  const [history, setHistory] = useState(getStoredHistory);
-  const [saveMessage, setSaveMessage] = useState("");
+
+  const [history, setHistory] = useState([]);
+  const [isHistoryLoading, setIsHistoryLoading] =
+    useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [statusMessage, setStatusMessage] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const workout = workoutProgram[selectedDay];
 
-  const previousWorkouts = useMemo(
-    () =>
-      history.filter(
-        (entry) =>
-          entry.day === selectedDay && hasLoggedSets(entry),
-      ),
-    [history, selectedDay],
-  );
+  const loadHistory = useCallback(async () => {
+    if (!user) {
+      setHistory([]);
+      return;
+    }
 
-  const previousWorkout = previousWorkouts[0];
+    setIsHistoryLoading(true);
+    setErrorMessage("");
+
+    try {
+      await ensureUserProfile(user);
+
+      const sessions = await getUserWorkoutHistory({
+        userId: user.id,
+        workoutDay: selectedDay,
+        limit: 10,
+      });
+
+      setHistory(sessions);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  }, [selectedDay, user]);
+
+  useEffect(() => {
+    Promise.resolve().then(loadHistory);
+  }, [loadHistory]);
+
+  useEffect(() => {
+    saveDraftForDay(selectedDay, workoutSets);
+  }, [selectedDay, workoutSets]);
+
+  const previousWorkout = history[0];
 
   const completedSets = Object.values(workoutSets)
     .flat()
-    .filter((set) => set.weight !== "" && set.reps !== "").length;
+    .filter(
+      (set) => set.weight !== "" && set.reps !== "",
+    ).length;
 
-  const totalSets = Object.values(workoutSets).flat().length;
+  const totalSets =
+    Object.values(workoutSets).flat().length;
 
   const changeWorkoutDay = (day) => {
     const nextWorkout = workoutProgram[day];
 
     setSelectedDay(day);
-    setWorkoutSets(createWorkoutState(nextWorkout));
-    setSaveMessage("");
+    setWorkoutSets(getDraftForDay(day, nextWorkout));
+    setStatusMessage("");
+    setErrorMessage("");
   };
 
   const updateExerciseSets = (exerciseId, sets) => {
@@ -97,35 +193,62 @@ function Workout() {
       return;
     }
 
+    clearDraftForDay(selectedDay);
     setWorkoutSets(createWorkoutState(workout));
-    setSaveMessage("");
+    setStatusMessage("");
+    setErrorMessage("");
   };
 
-  const saveWorkout = () => {
-    const exercises = workout.exercises.map((exercise) => ({
-      exerciseId: exercise.id,
-      exerciseName: exercise.name,
-      sets: workoutSets[exercise.id],
-    }));
-
-    const workoutEntry = {
-      id: crypto.randomUUID(),
-      date: new Date().toISOString(),
-      day: selectedDay,
-      workoutName: workout.name,
-      exercises,
-    };
-
-    const updatedHistory = [workoutEntry, ...history];
-
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify(updatedHistory),
-    );
-
-    setHistory(updatedHistory);
-    setSaveMessage("Workout saved on this device.");
+  const handleSignIn = async () => {
+    try {
+      setErrorMessage("");
+      await signInWithGoogle();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    }
   };
+
+  const handleSaveWorkout = async () => {
+    if (!user) {
+      setErrorMessage(
+        "Sign in with Google before saving your workout.",
+      );
+      return;
+    }
+
+    setIsSaving(true);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      await saveWorkoutSession({
+        userId: user.id,
+        workoutDay: selectedDay,
+        workoutName: workout.name,
+        workout,
+        workoutSets,
+      });
+
+      clearDraftForDay(selectedDay);
+      setWorkoutSets(createWorkoutState(workout));
+      setStatusMessage(
+        "Workout saved securely to Supabase.",
+      );
+
+      await loadHistory();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const previousWorkouts = useMemo(
+    () => history,
+    [history],
+  );
 
   return (
     <div className="page workout-page">
@@ -152,13 +275,48 @@ function Workout() {
           <button
             type="button"
             className="primary-action-button"
-            onClick={saveWorkout}
+            disabled={isSaving || isAuthLoading}
+            onClick={handleSaveWorkout}
           >
-            <Save size={17} />
-            Save workout
+            {isSaving ? (
+              <LoaderCircle
+                className="spin"
+                size={17}
+              />
+            ) : (
+              <Save size={17} />
+            )}
+
+            {isSaving ? "Saving…" : "Save workout"}
           </button>
         </div>
       </section>
+
+      {!isAuthLoading && !user && (
+        <section className="auth-required-card">
+          <div>
+            <Cloud size={22} />
+          </div>
+
+          <div>
+            <strong>Sign in to save across devices</strong>
+            <p>
+              Your current workout remains available as a
+              local draft, but completed sessions require an
+              account.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            className="secondary-button"
+            onClick={handleSignIn}
+          >
+            <LogIn size={17} />
+            Continue with Google
+          </button>
+        </section>
+      )}
 
       <section
         className="day-selector"
@@ -175,8 +333,13 @@ function Workout() {
             }`}
             onClick={() => changeWorkoutDay(day)}
           >
-            <span>{workoutProgram[day].label.slice(0, 3)}</span>
-            <small>{workoutProgram[day].name}</small>
+            <span>
+              {workoutProgram[day].label.slice(0, 3)}
+            </span>
+
+            <small>
+              {workoutProgram[day].name}
+            </small>
           </button>
         ))}
       </section>
@@ -202,10 +365,16 @@ function Workout() {
         </div>
       </section>
 
-      {saveMessage && (
+      {statusMessage && (
         <div className="success-message">
           <Check size={18} />
-          {saveMessage}
+          {statusMessage}
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="error-message">
+          {errorMessage}
         </div>
       )}
 
@@ -213,93 +382,125 @@ function Workout() {
         {workout.exercises.map((exercise) => {
           const previousExercise =
             previousWorkout?.exercises.find(
-              (item) => item.exerciseId === exercise.id,
+              (item) =>
+                item.exerciseId === exercise.id,
             );
 
           return (
             <ExerciseCard
               key={exercise.id}
               exercise={exercise}
-              sets={workoutSets[exercise.id]}
-              previousSets={previousExercise?.sets ?? []}
+              sets={
+                workoutSets[exercise.id] ??
+                createExerciseSets(exercise)
+              }
+              previousSets={
+                previousExercise?.sets ?? []
+              }
               onSetsChange={(sets) =>
-                updateExerciseSets(exercise.id, sets)
+                updateExerciseSets(
+                  exercise.id,
+                  sets,
+                )
               }
             />
           );
         })}
       </section>
 
-      {previousWorkouts.length > 0 && (
-        <section className="workout-history">
-          <div className="workout-history__heading">
-            <p className="eyebrow">History</p>
-            <h2>Recent {workout.name} sessions</h2>
-          </div>
+      <section className="workout-history">
+        <div className="workout-history__heading">
+          <p className="eyebrow">Cloud history</p>
+          <h2>Recent {workout.name} sessions</h2>
+        </div>
 
+        {isHistoryLoading ? (
+          <div className="history-loading">
+            <LoaderCircle
+              className="spin"
+              size={20}
+            />
+            Loading workout history…
+          </div>
+        ) : previousWorkouts.length === 0 ? (
+          <div className="card empty-state">
+            <h3>No saved sessions yet</h3>
+            <p>
+              Complete and save this workout to create
+              your first cloud history entry.
+            </p>
+          </div>
+        ) : (
           <div className="workout-history__list">
-            {previousWorkouts.slice(0, 5).map((session) => (
-              <article
-                className="workout-history__card"
-                key={session.id}
-              >
-                <div className="workout-history__date">
-                  <strong>
-                    {new Intl.DateTimeFormat("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    }).format(new Date(session.date))}
-                  </strong>
+            {previousWorkouts
+              .slice(0, 5)
+              .map((session) => (
+                <article
+                  className="workout-history__card"
+                  key={session.id}
+                >
+                  <div className="workout-history__date">
+                    <strong>
+                      {new Intl.DateTimeFormat(
+                        "en-US",
+                        {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        },
+                      ).format(
+                        new Date(session.date),
+                      )}
+                    </strong>
 
-                  <span>
-                    {new Intl.DateTimeFormat("en-US", {
-                      hour: "numeric",
-                      minute: "2-digit",
-                    }).format(new Date(session.date))}
-                  </span>
-                </div>
+                    <span>
+                      {new Intl.DateTimeFormat(
+                        "en-US",
+                        {
+                          hour: "numeric",
+                          minute: "2-digit",
+                        },
+                      ).format(
+                        new Date(session.date),
+                      )}
+                    </span>
+                  </div>
 
-                <div className="workout-history__exercises">
-                  {session.exercises.map((exercise) => {
-                    const loggedSets = exercise.sets.filter(
-                      (set) =>
-                        set.weight !== "" || set.reps !== "",
-                    );
+                  <div className="workout-history__exercises">
+                    {session.exercises.map(
+                      (exercise) => (
+                        <div
+                          key={exercise.exerciseId}
+                        >
+                          <strong>
+                            {exercise.exerciseName}
+                          </strong>
 
-                    if (loggedSets.length === 0) {
-                      return null;
-                    }
-
-                    return (
-                      <div key={exercise.exerciseId}>
-                        <strong>
-                          {exercise.exerciseName}
-                        </strong>
-
-                        <span>
-                          {loggedSets
-                            .map(
-                              (set) =>
-                                `${set.weight || "—"} lb × ${
-                                  set.reps || "—"
-                                }${
-                                  set.rir !== ""
-                                    ? ` · ${set.rir} RIR`
-                                    : ""
-                                }`,
-                            )
-                            .join(" | ")}
-                        </span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </article>
-            ))}
+                          <span>
+                            {exercise.sets
+                              .map(
+                                (set) =>
+                                  `${
+                                    set.weight || "—"
+                                  } lb × ${
+                                    set.reps || "—"
+                                  }${
+                                    set.rir !== ""
+                                      ? ` · ${set.rir} RIR`
+                                      : ""
+                                  }`,
+                              )
+                              .join(" | ")}
+                          </span>
+                        </div>
+                      ),
+                    )}
+                  </div>
+                </article>
+              ))}
           </div>
-        </section>
-      )}
+        )}
+      </section>
     </div>
   );
 }

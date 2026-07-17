@@ -1010,3 +1010,84 @@ a {
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
+
+.auth-required-card {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding: 18px 20px;
+  background: #121923;
+  border: 1px solid #29384a;
+  border-radius: 15px;
+}
+
+.auth-required-card > div:first-child {
+  display: grid;
+  width: 44px;
+  height: 44px;
+  color: #9ec5ff;
+  background: #19283b;
+  border-radius: 13px;
+  place-items: center;
+}
+
+.auth-required-card strong {
+  display: block;
+}
+
+.auth-required-card p {
+  margin: 3px 0 0;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.error-message {
+  margin-bottom: 16px;
+  padding: 13px 16px;
+  color: #ffb0b0;
+  background: #281517;
+  border: 1px solid #553033;
+  border-radius: 12px;
+  font-size: 0.87rem;
+  font-weight: 600;
+}
+
+.history-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 20px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.spin {
+  animation: fitcircle-spin 800ms linear infinite;
+}
+
+.primary-action-button:disabled,
+.secondary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+@keyframes fitcircle-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 720px) {
+  .auth-required-card {
+    grid-template-columns: auto 1fr;
+  }
+
+  .auth-required-card button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+}
