@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { LogIn } from "lucide-react";
+import { ChevronDown, LogIn } from "lucide-react";
 
 import Button from "../common/Button";
 import Card from "../common/Card";
@@ -10,6 +10,7 @@ import { useJoinGroup } from "../../hooks/useGroups";
 function JoinGroupDialog({ onJoined }) {
   const [inviteCode, setInviteCode] = useState("");
   const [formError, setFormError] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const joinGroupMutation = useJoinGroup();
 
@@ -21,6 +22,7 @@ function JoinGroupDialog({ onJoined }) {
 
     if (!cleanedCode) {
       setFormError("Invite code is required.");
+      setIsExpanded(true);
       return;
     }
 
@@ -29,11 +31,13 @@ function JoinGroupDialog({ onJoined }) {
         await joinGroupMutation.mutateAsync(cleanedCode);
 
       setInviteCode("");
+      setIsExpanded(false);
 
       if (onJoined) {
         onJoined(groupId);
       }
     } catch (error) {
+      setIsExpanded(true);
       setFormError(
         error instanceof Error
           ? error.message
@@ -44,44 +48,63 @@ function JoinGroupDialog({ onJoined }) {
 
   return (
     <Card className="group-action-card">
-      <div className="group-action-card__icon">
-        <LogIn size={22} aria-hidden="true" />
-      </div>
-
-      <div className="group-action-card__content">
-        <h2>Join a group</h2>
-        <p>
-          Enter an invite code shared by one of your
-          friends.
-        </p>
-      </div>
-
-      <form
-        className="group-action-card__form"
-        onSubmit={handleSubmit}
+      <button
+        type="button"
+        className="group-action-card__summary"
+        aria-expanded={isExpanded}
+        onClick={() =>
+          setIsExpanded((current) => !current)
+        }
       >
-        <Input
-          label="Invite code"
-          placeholder="K7NP4XQM92TR"
-          value={inviteCode}
-          onChange={(event) =>
-            setInviteCode(event.target.value.toUpperCase())
-          }
-          error={formError}
-          maxLength={30}
-          autoCapitalize="characters"
-          autoComplete="off"
-        />
+        <span className="group-action-card__icon">
+          <LogIn size={22} aria-hidden="true" />
+        </span>
 
-        <Button
-          type="submit"
-          variant="secondary"
-          loading={joinGroupMutation.isPending}
-          disabled={!inviteCode.trim()}
+        <span className="group-action-card__content">
+          <h2>Join a group</h2>
+          <p>
+            Enter an invite code shared by one of your
+            friends.
+          </p>
+        </span>
+
+        <ChevronDown
+          className="group-action-card__chevron"
+          size={18}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isExpanded && (
+        <form
+          className="group-action-card__form"
+          onSubmit={handleSubmit}
         >
-          Join Group
-        </Button>
-      </form>
+          <Input
+            label="Invite code"
+            placeholder="K7NP4XQM92TR"
+            value={inviteCode}
+            onChange={(event) =>
+              setInviteCode(
+                event.target.value.toUpperCase(),
+              )
+            }
+            error={formError}
+            maxLength={30}
+            autoCapitalize="characters"
+            autoComplete="off"
+          />
+
+          <Button
+            type="submit"
+            variant="secondary"
+            loading={joinGroupMutation.isPending}
+            disabled={!inviteCode.trim()}
+          >
+            Join Group
+          </Button>
+        </form>
+      )}
     </Card>
   );
 }

@@ -4,6 +4,8 @@ function Card({
   children,
   className = "",
   padding = "medium",
+  as: Component = "section",
+  ...cardProps
 }) {
   const classes = [
     "card",
@@ -13,12 +15,17 @@ function Card({
     .filter(Boolean)
     .join(" ");
 
-  return <section className={classes}>{children}</section>;
+  return (
+    <Component className={classes} {...cardProps}>
+      {children}
+    </Component>
+  );
 }
 
 Card.propTypes = {
   children: PropTypes.node.isRequired,
   className: PropTypes.string,
+  as: PropTypes.elementType,
   padding: PropTypes.oneOf([
     "none",
     "small",

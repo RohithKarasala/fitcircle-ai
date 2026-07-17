@@ -1,6 +1,6 @@
 import { useState } from "react";
 import PropTypes from "prop-types";
-import { Plus } from "lucide-react";
+import { ChevronDown, Plus } from "lucide-react";
 
 import Button from "../common/Button";
 import Card from "../common/Card";
@@ -10,6 +10,7 @@ import { useCreateGroup } from "../../hooks/useGroups";
 function CreateGroupDialog({ onCreated }) {
   const [name, setName] = useState("");
   const [formError, setFormError] = useState("");
+  const [isExpanded, setIsExpanded] = useState(false);
 
   const createGroupMutation = useCreateGroup();
 
@@ -23,6 +24,7 @@ function CreateGroupDialog({ onCreated }) {
       setFormError(
         "Group name must contain at least 2 characters."
       );
+      setIsExpanded(true);
       return;
     }
 
@@ -31,11 +33,13 @@ function CreateGroupDialog({ onCreated }) {
         await createGroupMutation.mutateAsync(cleanedName);
 
       setName("");
+      setIsExpanded(false);
 
       if (onCreated) {
         onCreated(groupId);
       }
     } catch (error) {
+      setIsExpanded(true);
       setFormError(
         error instanceof Error
           ? error.message
@@ -46,40 +50,59 @@ function CreateGroupDialog({ onCreated }) {
 
   return (
     <Card className="group-action-card">
-      <div className="group-action-card__icon">
-        <Plus size={22} aria-hidden="true" />
-      </div>
-
-      <div className="group-action-card__content">
-        <h2>Create a group</h2>
-        <p>
-          Start a private group and invite your workout
-          partners.
-        </p>
-      </div>
-
-      <form
-        className="group-action-card__form"
-        onSubmit={handleSubmit}
+      <button
+        type="button"
+        className="group-action-card__summary"
+        aria-expanded={isExpanded}
+        onClick={() =>
+          setIsExpanded((current) => !current)
+        }
       >
-        <Input
-          label="Group name"
-          placeholder="Weekend Warriors"
-          value={name}
-          onChange={(event) => setName(event.target.value)}
-          error={formError}
-          maxLength={60}
-          autoComplete="off"
-        />
+        <span className="group-action-card__icon">
+          <Plus size={22} aria-hidden="true" />
+        </span>
 
-        <Button
-          type="submit"
-          loading={createGroupMutation.isPending}
-          disabled={!name.trim()}
+        <span className="group-action-card__content">
+          <h2>Create a group</h2>
+          <p>
+            Start a private group and invite your workout
+            partners.
+          </p>
+        </span>
+
+        <ChevronDown
+          className="group-action-card__chevron"
+          size={18}
+          aria-hidden="true"
+        />
+      </button>
+
+      {isExpanded && (
+        <form
+          className="group-action-card__form"
+          onSubmit={handleSubmit}
         >
-          Create Group
-        </Button>
-      </form>
+          <Input
+            label="Group name"
+            placeholder="Weekend Warriors"
+            value={name}
+            onChange={(event) =>
+              setName(event.target.value)
+            }
+            error={formError}
+            maxLength={60}
+            autoComplete="off"
+          />
+
+          <Button
+            type="submit"
+            loading={createGroupMutation.isPending}
+            disabled={!name.trim()}
+          >
+            Create Group
+          </Button>
+        </form>
+      )}
     </Card>
   );
 }

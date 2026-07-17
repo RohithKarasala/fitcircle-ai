@@ -8,8 +8,27 @@ import Card from "../common/Card";
 function GroupCard({ group, onOpen, onCopyInvite }) {
   const isOwner = group.role === "owner";
 
+  function handleKeyDown(event) {
+    if (
+      event.target !== event.currentTarget ||
+      (event.key !== "Enter" && event.key !== " ")
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+    onOpen(group.groupId);
+  }
+
   return (
-    <Card className="group-card">
+    <Card
+      className="group-card"
+      role="link"
+      tabIndex={0}
+      aria-label={`Open ${group.name}`}
+      onClick={() => onOpen(group.groupId)}
+      onKeyDown={handleKeyDown}
+    >
       <div className="group-card__header">
         <div>
           <div className="group-card__title-row">
@@ -49,7 +68,10 @@ function GroupCard({ group, onOpen, onCopyInvite }) {
           <Button
             variant="secondary"
             size="small"
-            onClick={() => onCopyInvite(group.inviteCode)}
+            onClick={(event) => {
+              event.stopPropagation();
+              onCopyInvite(group.inviteCode);
+            }}
           >
             <Copy size={16} aria-hidden="true" />
             Copy
@@ -58,13 +80,10 @@ function GroupCard({ group, onOpen, onCopyInvite }) {
       )}
 
       <div className="group-card__actions">
-        <Button
-          fullWidth
-          onClick={() => onOpen(group.groupId)}
-        >
+        <span className="group-card__open">
           Open Group
           <ExternalLink size={16} aria-hidden="true" />
-        </Button>
+        </span>
       </div>
     </Card>
   );

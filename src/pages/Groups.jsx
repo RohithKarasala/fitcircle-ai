@@ -67,8 +67,8 @@ function Groups() {
           <h1>Train together</h1>
 
           <p>
-            Create a private group, invite your friends,
-            and share completed workouts.
+            Open your squad, check shared workouts, and
+            manage invite access from one place.
           </p>
         </div>
 
@@ -91,23 +91,13 @@ function Groups() {
         </div>
       )}
 
-      <section
-        className="groups-page__actions"
-        aria-label="Group actions"
-      >
-        <CreateGroupDialog
-          onCreated={handleGroupCreated}
-        />
-
-        <JoinGroupDialog onJoined={handleGroupJoined} />
-      </section>
-
-      <section className="groups-page__list-section">
+      <section className="groups-page__list-section groups-page__list-section--primary">
         <div className="groups-page__section-heading">
           <div>
             <h2>Your groups</h2>
             <p>
-              Groups you own or have joined appear here.
+              Jump back into the groups you own or have
+              joined.
             </p>
           </div>
 
@@ -180,6 +170,29 @@ function Groups() {
               ))}
             </div>
           )}
+      </section>
+
+      <section className="groups-page__manage-section">
+        <div className="groups-page__section-heading">
+          <div>
+            <h2>Manage groups</h2>
+            <p>
+              Create a new group or join one with an invite
+              code.
+            </p>
+          </div>
+        </div>
+
+        <div
+          className="groups-page__actions"
+          aria-label="Group actions"
+        >
+          <CreateGroupDialog
+            onCreated={handleGroupCreated}
+          />
+
+          <JoinGroupDialog onJoined={handleGroupJoined} />
+        </div>
       </section>
     </div>
   );
