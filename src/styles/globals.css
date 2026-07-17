@@ -466,6 +466,79 @@ a {
   color: #b8c0cb;
 }
 
+.settings-page__grid {
+  display: grid;
+  gap: 16px;
+  max-width: 920px;
+}
+
+.settings-page__card {
+  display: grid;
+  gap: 16px;
+}
+
+.settings-page__card-heading {
+  display: grid;
+  gap: 6px;
+}
+
+.settings-page__card-heading h2 {
+  margin: 0;
+  color: var(--text);
+  font-size: 1.12rem;
+  letter-spacing: -0.025em;
+}
+
+.settings-page__card-heading p {
+  max-width: 680px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.settings-page__schedule {
+  display: grid;
+  gap: 10px;
+}
+
+.settings-page__schedule-row {
+  display: grid;
+  grid-template-columns: 120px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #0e1115;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+
+.settings-page__schedule-row > span {
+  color: var(--text);
+  font-size: 0.84rem;
+  font-weight: 800;
+}
+
+.settings-page__schedule-row select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 9px;
+  outline: none;
+}
+
+.settings-page__schedule-row select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
+.settings-page__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .text-link {
   display: inline-flex;
   align-items: center;
@@ -552,6 +625,14 @@ a {
 
   .stat-card {
     min-height: 165px;
+  }
+
+  .settings-page__schedule-row {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page__actions .button {
+    width: 100%;
   }
 }
 

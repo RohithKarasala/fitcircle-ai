@@ -11,12 +11,14 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import ExerciseCard from "../components/workout/ExerciseCard";
 import { useAuth } from "../context/useAuth";
 import {
   getTodayWorkoutKey,
+  normalizeWorkoutSchedule,
   workoutDays,
   workoutProgram,
 } from "../data/workoutProgram";
@@ -25,6 +27,7 @@ import {
   getUserWorkoutHistory,
   saveWorkoutSession,
 } from "../services/workouts";
+import { getCurrentUserProfile } from "../services/profile";
 import {
   useGroups,
   useShareWorkout,
@@ -127,6 +130,7 @@ function Workout() {
   const [shareGroupIds, setShareGroupIds] = useState({});
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const appliedScheduleUserIdRef = useRef("");
 
   const workout = workoutProgram[selectedDay];
 
@@ -138,6 +142,53 @@ function Workout() {
   });
 
   const shareWorkoutMutation = useShareWorkout();
+
+  useEffect(() => {
+    let isCurrent = true;
+
+    async function loadScheduledDay() {
+      if (
+        !user ||
+        appliedScheduleUserIdRef.current === user.id
+      ) {
+        return;
+      }
+
+      try {
+        const profile = await getCurrentUserProfile(user.id);
+
+        if (!isCurrent) {
+          return;
+        }
+
+        const schedule = normalizeWorkoutSchedule(
+          profile?.workoutSchedule,
+        );
+        const scheduledDay = getTodayWorkoutKey(schedule);
+
+        setSelectedDay(scheduledDay);
+        setWorkoutSets(
+          getDraftForDay(
+            scheduledDay,
+            workoutProgram[scheduledDay],
+          ),
+        );
+        appliedScheduleUserIdRef.current = user.id;
+      } catch (error) {
+        console.error(error);
+
+        if (isCurrent) {
+          appliedScheduleUserIdRef.current = user.id;
+        }
+      }
+    }
+
+    loadScheduledDay();
+
+    return () => {
+      isCurrent = false;
+    };
+  }, [user]);
 
   const loadHistory = useCallback(async () => {
     if (!user) {

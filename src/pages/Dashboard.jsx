@@ -13,6 +13,12 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
+  defaultWorkoutSchedule,
+  getTodayWorkoutKey,
+  normalizeWorkoutSchedule,
+  workoutProgram,
+} from "../data/workoutProgram";
+import {
   getCurrentUserProfile,
   updateCurrentWeight,
 } from "../services/profile";
@@ -28,6 +34,11 @@ function Dashboard() {
   const [isWeightSaving, setIsWeightSaving] =
     useState(false);
   const [weightError, setWeightError] = useState("");
+  const [profileDisplayName, setProfileDisplayName] =
+    useState("");
+  const [workoutSchedule, setWorkoutSchedule] = useState(
+    defaultWorkoutSchedule,
+  );
 
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -36,12 +47,18 @@ function Dashboard() {
   }).format(new Date());
 
   const displayName =
-    user?.user_metadata?.full_name ??
-    user?.user_metadata?.name ??
-    user?.email?.split("@")[0] ??
+    profileDisplayName ||
+    user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
+    user?.email?.split("@")[0] ||
     "there";
 
   const firstName = displayName.split(" ")[0];
+  const todayWorkoutKey = getTodayWorkoutKey(workoutSchedule);
+  const todayWorkout = workoutProgram[todayWorkoutKey];
+  const isRecoveryWorkout =
+    todayWorkoutKey === "saturday" ||
+    todayWorkoutKey === "sunday";
 
   useEffect(() => {
     let isCurrent = true;
@@ -50,6 +67,8 @@ function Dashboard() {
       if (!user) {
         setCurrentWeight(null);
         setWeightInput("");
+        setProfileDisplayName("");
+        setWorkoutSchedule(defaultWorkoutSchedule);
         return;
       }
 
@@ -65,6 +84,13 @@ function Dashboard() {
 
         const nextWeight = profile?.currentWeightLb ?? null;
 
+        setProfileDisplayName(profile?.displayName ?? "");
+        setWorkoutSchedule(
+          normalizeWorkoutSchedule(
+            profile?.workoutSchedule ??
+              defaultWorkoutSchedule,
+          ),
+        );
         setCurrentWeight(nextWeight);
         setWeightInput(
           nextWeight === null ? "" : String(nextWeight),
@@ -133,8 +159,10 @@ function Dashboard() {
         <article className="card card--workout">
           <div className="card__header">
             <div>
-              <span className="card__label">Today’s workout</span>
-              <h2>Upper Body Strength</h2>
+              <span className="card__label">
+                Current workout for the day
+              </span>
+              <h2>{todayWorkout.name}</h2>
             </div>
 
             <div className="card__icon">
@@ -145,22 +173,24 @@ function Dashboard() {
           <div className="workout-summary">
             <div>
               <span>Exercises</span>
-              <strong>6</strong>
+              <strong>{todayWorkout.exercises.length}</strong>
             </div>
 
             <div>
               <span>Estimated time</span>
-              <strong>65 min</strong>
+              <strong>{todayWorkout.estimatedMinutes} min</strong>
             </div>
 
             <div>
               <span>Target effort</span>
-              <strong>1–2 RIR</strong>
+              <strong>
+                {isRecoveryWorkout ? "Easy pace" : "1–2 RIR"}
+              </strong>
             </div>
           </div>
 
           <Link className="primary-button" to="/workout">
-            Start workout
+            {isRecoveryWorkout ? "Open plan" : "Start workout"}
             <ArrowRight size={18} />
           </Link>
         </article>

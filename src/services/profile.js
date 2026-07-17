@@ -1,4 +1,7 @@
 import { supabase } from "./supabase";
+import {
+  normalizeWorkoutSchedule,
+} from "../data/workoutProgram";
 
 function normalizeWeight(value) {
   if (value === "" || value === null || value === undefined) {
@@ -25,7 +28,9 @@ export async function getCurrentUserProfile(userId) {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("id, display_name, avatar_url, current_weight_lb")
+    .select(
+      "id, display_name, avatar_url, current_weight_lb, workout_schedule",
+    )
     .eq("id", userId)
     .maybeSingle();
 
@@ -41,6 +46,75 @@ export async function getCurrentUserProfile(userId) {
     id: data.id,
     displayName: data.display_name,
     avatarUrl: data.avatar_url,
+    workoutSchedule: normalizeWorkoutSchedule(
+      data.workout_schedule,
+    ),
+    currentWeightLb:
+      data.current_weight_lb === null ||
+      data.current_weight_lb === undefined
+        ? null
+        : Number(data.current_weight_lb),
+  };
+}
+
+export async function updateProfileSettings({
+  user,
+  displayName,
+  workoutSchedule,
+}) {
+  if (!user) {
+    throw new Error("Sign in before updating settings.");
+  }
+
+  const cleanedDisplayName =
+    typeof displayName === "string"
+      ? displayName.trim()
+      : "";
+
+  if (!cleanedDisplayName) {
+    throw new Error("Display name is required.");
+  }
+
+  if (cleanedDisplayName.length > 80) {
+    throw new Error("Display name cannot exceed 80 characters.");
+  }
+
+  const avatarUrl =
+    user.user_metadata?.avatar_url ??
+    user.user_metadata?.picture ??
+    null;
+
+  const normalizedSchedule =
+    normalizeWorkoutSchedule(workoutSchedule);
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        display_name: cleanedDisplayName,
+        avatar_url: avatarUrl,
+        workout_schedule: normalizedSchedule,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "id",
+      },
+    )
+    .select("id, display_name, avatar_url, current_weight_lb, workout_schedule")
+    .single();
+
+  if (error) {
+    throw new Error(`Unable to update settings: ${error.message}`);
+  }
+
+  return {
+    id: data.id,
+    displayName: data.display_name,
+    avatarUrl: data.avatar_url,
+    workoutSchedule: normalizeWorkoutSchedule(
+      data.workout_schedule,
+    ),
     currentWeightLb:
       data.current_weight_lb === null ||
       data.current_weight_lb === undefined

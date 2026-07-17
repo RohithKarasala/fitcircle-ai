@@ -414,20 +414,103 @@ export const workoutProgram = {
       },
     ],
   },
+
+  saturday: {
+    label: "Saturday",
+    name: "Recovery Walk",
+    focus: "Easy movement, steps, sunlight, and recovery",
+    estimatedMinutes: 35,
+    exercises: [
+      {
+        id: "recovery-walk-saturday",
+        name: "Outdoor Walk",
+        equipment: "Bodyweight",
+        sets: 1,
+        repRange: "30–45 min",
+        restSeconds: 0,
+        description:
+          "Keep the pace easy enough to hold a conversation. Get outside if you can and let this support recovery rather than feel like another hard session.",
+      },
+    ],
+  },
+
+  sunday: {
+    label: "Sunday",
+    name: "Recovery Walk",
+    focus: "Light movement and preparation for the next training week",
+    estimatedMinutes: 30,
+    exercises: [
+      {
+        id: "recovery-walk-sunday",
+        name: "Easy Walk",
+        equipment: "Bodyweight",
+        sets: 1,
+        repRange: "20–40 min",
+        restSeconds: 0,
+        description:
+          "Walk at a relaxed pace, breathe through your nose when possible, and finish feeling better than when you started.",
+      },
+    ],
+  },
 };
 
 export const workoutDays = Object.keys(workoutProgram);
 
-export function getTodayWorkoutKey() {
-  const day = new Date().getDay();
+export const defaultWorkoutSchedule = {
+  monday: "monday",
+  tuesday: "tuesday",
+  wednesday: "wednesday",
+  thursday: "thursday",
+  friday: "friday",
+  saturday: "saturday",
+  sunday: "sunday",
+};
+
+export const weekDays = [
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+];
+
+export function getWeekdayKey(date = new Date()) {
+  const day = date.getDay();
 
   const dayMap = {
+    0: "sunday",
     1: "monday",
     2: "tuesday",
     3: "wednesday",
     4: "thursday",
     5: "friday",
+    6: "saturday",
   };
 
   return dayMap[day] ?? "monday";
+}
+
+export function normalizeWorkoutSchedule(schedule) {
+  return Object.fromEntries(
+    weekDays.map((day) => {
+      const workoutKey = schedule?.[day];
+
+      return [
+        day,
+        workoutProgram[workoutKey]
+          ? workoutKey
+          : defaultWorkoutSchedule[day],
+      ];
+    }),
+  );
+}
+
+export function getTodayWorkoutKey(schedule, date = new Date()) {
+  const weekday = getWeekdayKey(date);
+  const normalizedSchedule =
+    normalizeWorkoutSchedule(schedule);
+
+  return normalizedSchedule[weekday];
 }
