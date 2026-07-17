@@ -52,7 +52,18 @@ function createWorkoutState(workout) {
   return Object.fromEntries(
     workout.exercises.map((exercise) => [
       exercise.id,
-      createExerciseSets(exercise),
+      exercise.trackingType === "completion"
+        ? [
+            {
+              id: crypto.randomUUID(),
+              setNumber: 1,
+              weight: "",
+              reps: "",
+              rir: "",
+              completed: false,
+            },
+          ]
+        : createExerciseSets(exercise),
     ]),
   );
 }
@@ -134,6 +145,9 @@ function Workout() {
   const appliedScheduleUserIdRef = useRef("");
 
   const workout = workoutProgram[selectedDay];
+  const isCompletionWorkout = workout.exercises.every(
+    (exercise) => exercise.trackingType === "completion",
+  );
 
   const {
     data: groups = [],
@@ -235,7 +249,9 @@ function Workout() {
   const completedSets = Object.values(workoutSets)
     .flat()
     .filter(
-      (set) => set.weight !== "" && set.reps !== "",
+      (set) =>
+        set.completed ||
+        (set.weight !== "" && set.reps !== ""),
     ).length;
 
   const totalSets =
@@ -255,6 +271,27 @@ function Workout() {
       ...current,
       [exerciseId]: sets,
     }));
+  };
+
+  const toggleCompletionExercise = (exerciseId) => {
+    setWorkoutSets((current) => {
+      const currentSet = current[exerciseId]?.[0];
+      const nextCompleted = !currentSet?.completed;
+
+      return {
+        ...current,
+        [exerciseId]: [
+          {
+            id: currentSet?.id ?? crypto.randomUUID(),
+            setNumber: 1,
+            weight: "",
+            reps: nextCompleted ? "1" : "",
+            rir: "",
+            completed: nextCompleted,
+          },
+        ],
+      };
+    });
   };
 
   const resetWorkout = () => {
@@ -501,7 +538,11 @@ function Workout() {
         <div>
           <span>Workout progress</span>
           <strong>
-            {completedSets} of {totalSets} sets logged
+            {isCompletionWorkout
+              ? completedSets > 0
+                ? "Walk completed"
+                : "Walk not logged yet"
+              : `${completedSets} of ${totalSets} sets logged`}
           </strong>
         </div>
 
@@ -538,6 +579,43 @@ function Workout() {
               (item) =>
                 item.exerciseId === exercise.id,
             );
+          const completionSet =
+            workoutSets[exercise.id]?.[0];
+
+          if (exercise.trackingType === "completion") {
+            return (
+              <article
+                className="recovery-card"
+                key={exercise.id}
+              >
+                <div className="recovery-card__content">
+                  <span>{exercise.equipment}</span>
+                  <h2>{exercise.name}</h2>
+                  <p>{exercise.description}</p>
+                </div>
+
+                <button
+                  type="button"
+                  className={`recovery-card__toggle ${
+                    completionSet?.completed
+                      ? "recovery-card__toggle--active"
+                      : ""
+                  }`}
+                  aria-pressed={Boolean(
+                    completionSet?.completed,
+                  )}
+                  onClick={() =>
+                    toggleCompletionExercise(exercise.id)
+                  }
+                >
+                  <Check size={18} />
+                  {completionSet?.completed
+                    ? "Walked today"
+                    : "Did you walk today?"}
+                </button>
+              </article>
+            );
+          }
 
           return (
             <ExerciseCard
