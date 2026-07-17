@@ -17,7 +17,7 @@ function AppLayout() {
           isSidebarOpen ? "sidebar-wrapper--open" : ""
         }`}
       >
-        <Sidebar />
+        <Sidebar onNavigate={closeSidebar} />
       </div>
 
       {isSidebarOpen && (

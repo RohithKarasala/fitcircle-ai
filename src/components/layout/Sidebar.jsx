@@ -52,7 +52,7 @@ const navigation = [
   },
 ];
 
-function Sidebar() {
+function Sidebar({ onNavigate }) {
   const {
     user,
     isLoading,
@@ -82,6 +82,7 @@ function Sidebar() {
   const handleGoogleSignIn = async () => {
     try {
       await signInWithGoogle();
+      onNavigate?.();
     } catch (error) {
       console.error("Google sign-in failed:", error);
     }
@@ -90,6 +91,7 @@ function Sidebar() {
   const handleSignOut = async () => {
     try {
       await signOut();
+      onNavigate?.();
     } catch (error) {
       console.error("Sign-out failed:", error);
     }
@@ -117,6 +119,7 @@ function Sidebar() {
             key={path}
             to={path}
             end={path === "/"}
+            onClick={onNavigate}
             className={({ isActive }) =>
               `sidebar__link ${
                 isActive ? "sidebar__link--active" : ""
