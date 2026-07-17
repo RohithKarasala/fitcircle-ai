@@ -460,6 +460,214 @@ a {
   color: #ffb0b0 !important;
 }
 
+.progress-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.progress-card {
+  min-width: 0;
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.progress-card--accent {
+  background:
+    radial-gradient(circle at top right, rgb(183 243 74 / 13%), transparent 48%),
+    var(--surface);
+}
+
+.progress-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.progress-card__header svg {
+  color: var(--primary);
+}
+
+.progress-card strong {
+  display: block;
+  margin-top: 28px;
+  font-size: 1.65rem;
+  letter-spacing: -0.04em;
+}
+
+.progress-card p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.progress-panel {
+  margin-top: 16px;
+  padding: 22px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.progress-panel__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.progress-panel__heading h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  letter-spacing: -0.025em;
+}
+
+.progress-panel__heading p {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+}
+
+.progress-panel__empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+}
+
+.progress-delta {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.progress-delta--positive {
+  color: var(--primary);
+  background: #202a15;
+  border: 1px solid #33431f;
+}
+
+.progress-delta--negative {
+  color: #ffb0b0;
+  background: #281517;
+  border: 1px solid #553033;
+}
+
+.progress-comparison {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.progress-comparison div {
+  padding: 16px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.progress-comparison span,
+.progress-comparison strong {
+  display: block;
+}
+
+.progress-comparison span {
+  color: var(--muted);
+  font-size: 0.78rem;
+}
+
+.progress-comparison strong {
+  margin-top: 5px;
+  font-size: 1.25rem;
+}
+
+.progress-trend-list,
+.progress-session-list {
+  display: grid;
+  gap: 10px;
+}
+
+.progress-trend {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.4fr) repeat(3, minmax(110px, 0.75fr));
+  align-items: center;
+  gap: 14px;
+  padding: 15px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.progress-trend span,
+.progress-trend strong,
+.progress-session span,
+.progress-session strong {
+  display: block;
+}
+
+.progress-trend span,
+.progress-session span {
+  color: var(--muted);
+  font-size: 0.76rem;
+}
+
+.progress-trend strong {
+  margin-top: 3px;
+  font-size: 0.9rem;
+}
+
+.progress-text-positive {
+  color: var(--primary);
+}
+
+.progress-text-negative {
+  color: #ffb0b0;
+}
+
+.progress-session {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 15px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.progress-session > div:last-child {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  text-align: right;
+}
+
+.progress-page__empty {
+  display: grid;
+  justify-items: center;
+  padding: 56px 20px;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.progress-page__empty svg {
+  color: var(--primary);
+}
+
 .recommendation-copy {
   max-width: 760px;
   margin: 18px 0;
@@ -1216,6 +1424,34 @@ a {
 }
 
 @media (max-width: 720px) {
+  .progress-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-panel {
+    padding: 18px;
+  }
+
+  .progress-panel__heading,
+  .progress-session {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .progress-delta {
+    width: fit-content;
+  }
+
+  .progress-comparison,
+  .progress-trend {
+    grid-template-columns: 1fr;
+  }
+
+  .progress-session > div:last-child {
+    justify-content: flex-start;
+    text-align: left;
+  }
+
   .workout-history__card {
     grid-template-columns: 1fr;
     gap: 16px;
