@@ -6,20 +6,31 @@ import {
   Scale,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "../context/useAuth";
 
 function Dashboard() {
+  const { user } = useAuth();
+
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   }).format(new Date());
 
+  const displayName =
+    user?.user_metadata?.full_name ??
+    user?.user_metadata?.name ??
+    user?.email?.split("@")[0] ??
+    "there";
+
+  const firstName = displayName.split(" ")[0];
+
   return (
     <div className="page">
       <section className="page-heading">
         <div>
           <p className="eyebrow">{today}</p>
-          <h1>Good morning, Rohith.</h1>
+          <h1>Good morning, {firstName}.</h1>
           <p>Here is what you have planned for today.</p>
         </div>
       </section>

@@ -12,18 +12,36 @@ import { formatDate } from "../../utils/date";
 
 function getMemberLabel(member, currentUserId) {
   if (member.userId === currentUserId) {
-    return "You";
+    return member.displayName
+      ? `${member.displayName} (You)`
+      : "You";
   }
 
-  return `Member ${member.userId.slice(0, 8)}`;
+  return (
+    member.displayName ?? `Member ${member.userId.slice(0, 8)}`
+  );
+}
+
+function getInitials(name = "") {
+  const initials = name
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join("")
+    .toUpperCase();
+
+  return initials;
 }
 
 function getMemberInitials(member, currentUserId) {
-  if (member.userId === currentUserId) {
-    return "YO";
-  }
+  const label = getMemberLabel(member, currentUserId)
+    .replace(" (You)", "")
+    .trim();
 
-  return member.userId.slice(0, 2).toUpperCase();
+  return (
+    getInitials(label) || member.userId.slice(0, 2).toUpperCase()
+  );
 }
 
 function MemberList({
@@ -94,9 +112,18 @@ function MemberList({
             className="member-list__row"
             key={member.userId}
           >
-            <div className="member-list__avatar">
-              {getMemberInitials(member, currentUserId)}
-            </div>
+            {member.avatarUrl ? (
+              <img
+                className="member-list__avatar"
+                src={member.avatarUrl}
+                alt={`${getMemberLabel(member, currentUserId)} profile`}
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <div className="member-list__avatar">
+                {getMemberInitials(member, currentUserId)}
+              </div>
+            )}
 
             <div className="member-list__body">
               <strong>
@@ -164,6 +191,8 @@ MemberList.propTypes = {
       userId: PropTypes.string.isRequired,
       role: PropTypes.oneOf(["owner", "member"]).isRequired,
       joinedAt: PropTypes.string.isRequired,
+      displayName: PropTypes.string,
+      avatarUrl: PropTypes.string,
     }),
   ).isRequired,
   currentUserId: PropTypes.string,

@@ -48,6 +48,12 @@ function GroupDetails() {
     () => membersQuery.data ?? [],
     [membersQuery.data],
   );
+  const currentMember = useMemo(
+    () =>
+      members.find((member) => member.userId === user?.id) ??
+      null,
+    [members, user?.id],
+  );
   const isOwner = group?.role === "owner";
 
   function showNotice(message) {
@@ -247,6 +253,8 @@ function GroupDetails() {
       {activeTab === "settings" && (
         <SettingsPanel
           group={group}
+          currentUser={user}
+          currentMember={currentMember}
           isOwner={isOwner}
           onNotice={showNotice}
           onDeleted={() => navigate("/groups")}

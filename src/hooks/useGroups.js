@@ -18,6 +18,7 @@ import {
   renameGroup,
   shareWorkoutWithGroup,
   unshareWorkoutFromGroup,
+  updateCurrentUserProfile,
 } from "../services/groups";
 
 export const groupQueryKeys = {
@@ -227,6 +228,20 @@ export function useDeleteGroup() {
         ],
       });
 
+    },
+  });
+}
+
+export function useUpdateCurrentUserProfile() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateCurrentUserProfile,
+
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: groupQueryKeys.all,
+      });
     },
   });
 }

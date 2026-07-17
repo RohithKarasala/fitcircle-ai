@@ -16,10 +16,13 @@ import {
   useLeaveGroup,
   useRegenerateGroupInviteCode,
   useRenameGroup,
+  useUpdateCurrentUserProfile,
 } from "../../hooks/useGroups";
 
 function SettingsPanel({
   group,
+  currentUser,
+  currentMember,
   isOwner,
   onNotice,
   onDeleted,
@@ -34,8 +37,17 @@ function SettingsPanel({
     nameState.groupId === group.id
       ? nameState.value
       : group.name;
+  const initialDisplayName =
+    currentMember?.displayName ??
+    currentUser?.user_metadata?.full_name ??
+    currentUser?.user_metadata?.name ??
+    currentUser?.email?.split("@")[0] ??
+    "";
+  const [profileName, setProfileName] =
+    useState(initialDisplayName);
 
   const renameMutation = useRenameGroup();
+  const updateProfileMutation = useUpdateCurrentUserProfile();
   const regenerateInviteMutation =
     useRegenerateGroupInviteCode();
   const deleteGroupMutation = useDeleteGroup();
@@ -54,6 +66,24 @@ function SettingsPanel({
         name: name.trim(),
       });
       onNotice("Group name updated.");
+    } catch (error) {
+      onError(error);
+    }
+  }
+
+  async function handleProfileNameUpdate(event) {
+    event.preventDefault();
+
+    if (!profileName.trim()) {
+      onError(new Error("Display name is required."));
+      return;
+    }
+
+    try {
+      await updateProfileMutation.mutateAsync({
+        displayName: profileName.trim(),
+      });
+      onNotice("Display name updated.");
     } catch (error) {
       onError(error);
     }
@@ -138,6 +168,37 @@ function SettingsPanel({
 
   return (
     <div className="group-settings">
+      <Card className="group-settings__card">
+        <h2>Your display name</h2>
+        <p>
+          This is how you appear in group member lists and
+          shared workout feeds.
+        </p>
+
+        <form
+          className="group-settings__form"
+          onSubmit={handleProfileNameUpdate}
+        >
+          <Input
+            label="Display name"
+            value={profileName}
+            onChange={(event) =>
+              setProfileName(event.target.value)
+            }
+            maxLength={80}
+          />
+
+          <Button
+            type="submit"
+            disabled={!profileName.trim()}
+            loading={updateProfileMutation.isPending}
+          >
+            <Save size={16} aria-hidden="true" />
+            Save display name
+          </Button>
+        </form>
+      </Card>
+
       <Card className="group-settings__card">
         <h2>Group name</h2>
         <p>
@@ -250,6 +311,16 @@ SettingsPanel.propTypes = {
     name: PropTypes.string.isRequired,
     inviteCode: PropTypes.string,
   }).isRequired,
+  currentUser: PropTypes.shape({
+    email: PropTypes.string,
+    user_metadata: PropTypes.shape({
+      full_name: PropTypes.string,
+      name: PropTypes.string,
+    }),
+  }),
+  currentMember: PropTypes.shape({
+    displayName: PropTypes.string,
+  }),
   isOwner: PropTypes.bool.isRequired,
   onNotice: PropTypes.func.isRequired,
   onDeleted: PropTypes.func.isRequired,

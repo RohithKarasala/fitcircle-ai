@@ -97,19 +97,51 @@ export async function ensureUserProfile(user) {
     user.user_metadata?.picture ??
     null;
 
+  const { data: existingProfile, error: loadError } =
+    await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+  if (loadError) {
+    throw new Error(
+      `Unable to load profile: ${loadError.message}`,
+    );
+  }
+
+  if (existingProfile) {
+    const profileUpdate = {
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (!existingProfile.display_name) {
+      profileUpdate.display_name = displayName;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(profileUpdate)
+      .eq("id", user.id);
+
+    if (error) {
+      throw new Error(
+        `Unable to update profile: ${error.message}`,
+      );
+    }
+
+    return;
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .upsert(
-      {
-        id: user.id,
-        display_name: displayName,
-        avatar_url: avatarUrl,
-        updated_at: new Date().toISOString(),
-      },
-      {
-        onConflict: "id",
-      },
-    );
+    .insert({
+      id: user.id,
+      display_name: displayName,
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    });
 
   if (error) {
     throw new Error(

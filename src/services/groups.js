@@ -65,6 +65,72 @@ async function requireAuthenticatedUser() {
   return user;
 }
 
+async function ensureProfileForUser(user) {
+  const displayName =
+    user.user_metadata?.full_name ??
+    user.user_metadata?.name ??
+    user.email?.split("@")[0] ??
+    "FitCircle Member";
+
+  const avatarUrl =
+    user.user_metadata?.avatar_url ??
+    user.user_metadata?.picture ??
+    null;
+
+  const { data: existingProfile, error: loadError } =
+    await supabase
+      .from("profiles")
+      .select("id, display_name")
+      .eq("id", user.id)
+      .maybeSingle();
+
+  if (loadError) {
+    throw createServiceError(
+      loadError,
+      "Unable to load your profile."
+    );
+  }
+
+  if (existingProfile) {
+    const profileUpdate = {
+      avatar_url: avatarUrl,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (!existingProfile.display_name) {
+      profileUpdate.display_name = displayName;
+    }
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(profileUpdate)
+      .eq("id", user.id);
+
+    if (error) {
+      throw createServiceError(
+        error,
+        "Unable to update your profile."
+      );
+    }
+
+    return;
+  }
+
+  const { error } = await supabase.from("profiles").insert({
+    id: user.id,
+    display_name: displayName,
+    avatar_url: avatarUrl,
+    updated_at: new Date().toISOString(),
+  });
+
+  if (error) {
+    throw createServiceError(
+      error,
+      "Unable to create your profile."
+    );
+  }
+}
+
 /**
  * Creates a private workout group.
  *
@@ -74,7 +140,8 @@ async function requireAuthenticatedUser() {
  * @returns {Promise<string>} Created group ID
  */
 export async function createGroup(name) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
+  await ensureProfileForUser(user);
 
   const cleanedName = requireString(name, "Group name");
 
@@ -102,7 +169,8 @@ export async function createGroup(name) {
  * @returns {Promise<string>} Joined group ID
  */
 export async function joinGroup(inviteCode) {
-  await requireAuthenticatedUser();
+  const user = await requireAuthenticatedUser();
+  await ensureProfileForUser(user);
 
   const cleanedCode = requireString(inviteCode, "Invite code");
 
@@ -137,6 +205,7 @@ export async function joinGroup(inviteCode) {
  */
 export async function getUserGroups() {
   const user = await requireAuthenticatedUser();
+  await ensureProfileForUser(user);
 
   const { data: memberships, error: membershipsError } = await supabase
     .from("group_members")
@@ -200,6 +269,7 @@ export async function getUserGroups() {
  */
 export async function getGroupById(groupId) {
   const user = await requireAuthenticatedUser();
+  await ensureProfileForUser(user);
   const cleanedGroupId = requireString(groupId, "Group ID");
 
   const { data: membership, error: membershipError } = await supabase
@@ -267,11 +337,12 @@ export async function getGroupMembers(groupId) {
 
   const cleanedGroupId = requireString(groupId, "Group ID");
 
-  const { data, error } = await supabase
-    .from("group_members")
-    .select("group_id, user_id, role, joined_at")
-    .eq("group_id", cleanedGroupId)
-    .order("joined_at", { ascending: true });
+  const { data, error } = await supabase.rpc(
+    "get_group_members_with_profiles",
+    {
+      p_group_id: cleanedGroupId,
+    }
+  );
 
   if (error) {
     throw createServiceError(error, "Unable to load group members.");
@@ -282,7 +353,50 @@ export async function getGroupMembers(groupId) {
     userId: member.user_id,
     role: member.role,
     joinedAt: member.joined_at,
+    displayName: member.display_name,
+    avatarUrl: member.avatar_url,
   }));
+}
+
+export async function updateCurrentUserProfile({ displayName }) {
+  const user = await requireAuthenticatedUser();
+  const cleanedDisplayName = requireString(
+    displayName,
+    "Display name"
+  );
+
+  if (cleanedDisplayName.length > 80) {
+    throw new Error("Display name cannot exceed 80 characters.");
+  }
+
+  const { error } = await supabase
+    .from("profiles")
+    .upsert(
+      {
+        id: user.id,
+        display_name: cleanedDisplayName,
+        avatar_url:
+          user.user_metadata?.avatar_url ??
+          user.user_metadata?.picture ??
+          null,
+        updated_at: new Date().toISOString(),
+      },
+      {
+        onConflict: "id",
+      }
+    );
+
+  if (error) {
+    throw createServiceError(
+      error,
+      "Unable to update your display name."
+    );
+  }
+
+  return {
+    id: user.id,
+    displayName: cleanedDisplayName,
+  };
 }
 
 /**
