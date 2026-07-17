@@ -415,14 +415,14 @@ export const workoutProgram = {
     ],
   },
 
-  saturday: {
-    label: "Saturday",
+  recovery: {
+    label: "Recovery",
     name: "Recovery Walk",
     focus: "Easy movement, steps, sunlight, and recovery",
     estimatedMinutes: 35,
     exercises: [
       {
-        id: "recovery-walk-saturday",
+        id: "recovery-walk",
         name: "Outdoor Walk",
         equipment: "Bodyweight",
         trackingType: "completion",
@@ -431,26 +431,6 @@ export const workoutProgram = {
         restSeconds: 0,
         description:
           "Keep the pace easy enough to hold a conversation. Get outside if you can and let this support recovery rather than feel like another hard session.",
-      },
-    ],
-  },
-
-  sunday: {
-    label: "Sunday",
-    name: "Recovery Walk",
-    focus: "Light movement and preparation for the next training week",
-    estimatedMinutes: 30,
-    exercises: [
-      {
-        id: "recovery-walk-sunday",
-        name: "Easy Walk",
-        equipment: "Bodyweight",
-        trackingType: "completion",
-        sets: 1,
-        repRange: "20–40 min",
-        restSeconds: 0,
-        description:
-          "Walk at a relaxed pace, breathe through your nose when possible, and finish feeling better than when you started.",
       },
     ],
   },
@@ -464,8 +444,18 @@ export const defaultWorkoutSchedule = {
   wednesday: "wednesday",
   thursday: "thursday",
   friday: "friday",
-  saturday: "saturday",
-  sunday: "sunday",
+  saturday: "recovery",
+  sunday: "recovery",
+};
+
+export const weekDayLabels = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
 };
 
 export const weekDays = [

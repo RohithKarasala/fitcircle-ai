@@ -58,8 +58,9 @@ function Dashboard() {
   const todayWorkoutKey = getTodayWorkoutKey(workoutSchedule);
   const todayWorkout = workoutProgram[todayWorkoutKey];
   const isRecoveryWorkout =
-    todayWorkoutKey === "saturday" ||
-    todayWorkoutKey === "sunday";
+    todayWorkout.exercises.every(
+      (exercise) => exercise.trackingType === "completion",
+    );
 
   useEffect(() => {
     let isCurrent = true;

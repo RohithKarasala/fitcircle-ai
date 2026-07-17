@@ -14,6 +14,7 @@ import { useAuth } from "../context/useAuth";
 import {
   defaultWorkoutSchedule,
   normalizeWorkoutSchedule,
+  weekDayLabels,
   weekDays,
   workoutProgram,
 } from "../data/workoutProgram";
@@ -25,7 +26,7 @@ import {
 const workoutOptions = Object.entries(workoutProgram).map(
   ([key, workout]) => ({
     key,
-    label: `${workout.label}: ${workout.name}`,
+    label: workout.name,
   }),
 );
 
@@ -300,7 +301,7 @@ function Settings() {
                   className="settings-page__schedule-row"
                   key={day}
                 >
-                  <span>{workoutProgram[day].label}</span>
+                  <span>{weekDayLabels[day]}</span>
 
                   <select
                     value={schedule[day]}

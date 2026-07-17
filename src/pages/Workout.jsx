@@ -17,9 +17,12 @@ import {
 import ExerciseCard from "../components/workout/ExerciseCard";
 import { useAuth } from "../context/useAuth";
 import {
+  defaultWorkoutSchedule,
+  getWeekdayKey,
   getTodayWorkoutKey,
   normalizeWorkoutSchedule,
-  workoutDays,
+  weekDayLabels,
+  weekDays,
   workoutProgram,
 } from "../data/workoutProgram";
 import {
@@ -83,8 +86,19 @@ function getDrafts() {
 function getDraftForDay(day, workout) {
   const drafts = getDrafts();
   const draft = drafts[day];
+  const exerciseIds = workout.exercises.map(
+    (exercise) => exercise.id,
+  );
 
   if (!draft?.workoutSets) {
+    return createWorkoutState(workout);
+  }
+
+  const hasMatchingExercises = exerciseIds.every(
+    (exerciseId) => Array.isArray(draft.workoutSets[exerciseId]),
+  );
+
+  if (!hasMatchingExercises) {
     return createWorkoutState(workout);
   }
 
@@ -120,15 +134,20 @@ function Workout() {
   const { user, isLoading: isAuthLoading, signInWithGoogle } =
     useAuth();
 
-  const initialDay = getTodayWorkoutKey();
+  const initialDay = getWeekdayKey();
 
   const [selectedDay, setSelectedDay] =
     useState(initialDay);
+  const [workoutSchedule, setWorkoutSchedule] = useState(
+    defaultWorkoutSchedule,
+  );
+  const initialWorkoutKey =
+    workoutSchedule[initialDay] ?? initialDay;
 
   const [workoutSets, setWorkoutSets] = useState(() =>
     getDraftForDay(
       initialDay,
-      workoutProgram[initialDay],
+      workoutProgram[initialWorkoutKey],
     ),
   );
 
@@ -144,7 +163,10 @@ function Workout() {
   const [errorMessage, setErrorMessage] = useState("");
   const appliedScheduleUserIdRef = useRef("");
 
-  const workout = workoutProgram[selectedDay];
+  const selectedWorkoutKey =
+    workoutSchedule[selectedDay] ??
+    defaultWorkoutSchedule[selectedDay];
+  const workout = workoutProgram[selectedWorkoutKey];
   const isCompletionWorkout = workout.exercises.every(
     (exercise) => exercise.trackingType === "completion",
   );
@@ -164,6 +186,7 @@ function Workout() {
     async function loadScheduledDay() {
       if (!user) {
         setTrackRir(false);
+        setWorkoutSchedule(defaultWorkoutSchedule);
         return;
       }
 
@@ -181,14 +204,18 @@ function Workout() {
         const schedule = normalizeWorkoutSchedule(
           profile?.workoutSchedule,
         );
-        const scheduledDay = getTodayWorkoutKey(schedule);
+        const today = getWeekdayKey();
+        const scheduledWorkoutKey = getTodayWorkoutKey(
+          schedule,
+        );
 
         setTrackRir(Boolean(profile?.trackRir));
-        setSelectedDay(scheduledDay);
+        setWorkoutSchedule(schedule);
+        setSelectedDay(today);
         setWorkoutSets(
           getDraftForDay(
-            scheduledDay,
-            workoutProgram[scheduledDay],
+            today,
+            workoutProgram[scheduledWorkoutKey],
           ),
         );
         appliedScheduleUserIdRef.current = user.id;
@@ -258,7 +285,9 @@ function Workout() {
     Object.values(workoutSets).flat().length;
 
   const changeWorkoutDay = (day) => {
-    const nextWorkout = workoutProgram[day];
+    const nextWorkoutKey =
+      workoutSchedule[day] ?? defaultWorkoutSchedule[day];
+    const nextWorkout = workoutProgram[nextWorkoutKey];
 
     setSelectedDay(day);
     setWorkoutSets(getDraftForDay(day, nextWorkout));
@@ -512,7 +541,7 @@ function Workout() {
         className="day-selector"
         aria-label="Select workout day"
       >
-        {workoutDays.map((day) => (
+        {weekDays.map((day) => (
           <button
             type="button"
             key={day}
@@ -524,11 +553,16 @@ function Workout() {
             onClick={() => changeWorkoutDay(day)}
           >
             <span>
-              {workoutProgram[day].label.slice(0, 3)}
+              {weekDayLabels[day].slice(0, 3)}
             </span>
 
             <small>
-              {workoutProgram[day].name}
+              {
+                workoutProgram[
+                  workoutSchedule[day] ??
+                    defaultWorkoutSchedule[day]
+                ].name
+              }
             </small>
           </button>
         ))}
