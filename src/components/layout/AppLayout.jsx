@@ -4,12 +4,36 @@ import {
   LoaderCircle,
   Menu,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import Sidebar from "./Sidebar";
 import { useAuth } from "../../context/useAuth";
 import { useGroupActivity } from "../../hooks/useGroups";
 import { formatDate } from "../../utils/date";
+
+const GROUP_ACTIVITY_SEEN_KEY = "fitcircle-group-activity-seen-at";
+
+function getStoredActivitySeenAt() {
+  try {
+    return localStorage.getItem(GROUP_ACTIVITY_SEEN_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+function getTimestamp(value) {
+  const time = new Date(value).getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function getLatestActivityAt(notifications) {
+  return notifications.reduce((latest, item) => {
+    const latestTime = getTimestamp(latest);
+    const itemTime = getTimestamp(item.sharedAt);
+
+    return itemTime > latestTime ? item.sharedAt : latest;
+  }, "");
+}
 
 function AppLayout() {
   const navigate = useNavigate();
@@ -17,6 +41,9 @@ function AppLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] =
     useState(false);
+  const [lastSeenActivityAt, setLastSeenActivityAt] = useState(
+    getStoredActivitySeenAt,
+  );
   const {
     data: notifications = [],
     isLoading: isNotificationsLoading,
@@ -24,11 +51,49 @@ function AppLayout() {
     enabled: Boolean(user),
   });
 
+  const latestActivityAt = useMemo(
+    () => getLatestActivityAt(notifications),
+    [notifications],
+  );
+
+  const unreadCount = useMemo(() => {
+    const seenTime = getTimestamp(lastSeenActivityAt);
+
+    return notifications.filter((item) => {
+      const sharedTime = getTimestamp(item.sharedAt);
+
+      return sharedTime > seenTime;
+    }).length;
+  }, [lastSeenActivityAt, notifications]);
+
+  function markActivitySeen() {
+    if (!latestActivityAt) {
+      return;
+    }
+
+    setLastSeenActivityAt(latestActivityAt);
+
+    try {
+      localStorage.setItem(
+        GROUP_ACTIVITY_SEEN_KEY,
+        latestActivityAt,
+      );
+    } catch {
+      // Local storage is a convenience only; the panel still works without it.
+    }
+  }
+
+  function toggleNotifications() {
+    if (!isNotificationsOpen) {
+      markActivitySeen();
+    }
+
+    setIsNotificationsOpen((current) => !current);
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false);
   };
-
-  const unreadCount = notifications.length;
 
   function openNotification(groupId) {
     setIsNotificationsOpen(false);
@@ -75,9 +140,7 @@ function AppLayout() {
               type="button"
               aria-label="Notifications"
               aria-expanded={isNotificationsOpen}
-              onClick={() =>
-                setIsNotificationsOpen((current) => !current)
-              }
+              onClick={toggleNotifications}
             >
               <Bell size={20} />
               {unreadCount > 0 && (
