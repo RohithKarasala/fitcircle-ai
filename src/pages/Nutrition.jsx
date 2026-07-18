@@ -1,4 +1,7 @@
 import {
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Droplets,
   Dumbbell,
   Flame,
@@ -116,9 +119,45 @@ function getTotals(entries) {
   );
 }
 
+function getDateFromKey(dateKey) {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function shiftDateKey(dateKey, amount) {
+  const date = getDateFromKey(dateKey);
+
+  date.setDate(date.getDate() + amount);
+
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+
+  return new Date(date.getTime() - timezoneOffset)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function formatSelectedDate(dateKey) {
+  const todayKey = getTodayKey();
+  const yesterdayKey = shiftDateKey(todayKey, -1);
+
+  if (dateKey === todayKey) {
+    return "Today";
+  }
+
+  if (dateKey === yesterdayKey) {
+    return "Yesterday";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(getDateFromKey(dateKey));
+}
+
 function Nutrition() {
   const { user, isLoading, signInWithGoogle } = useAuth();
-  const [date] = useState(getTodayKey);
+  const todayKey = getTodayKey();
+  const [date, setDate] = useState(todayKey);
   const [targets, setTargets] = useState(
     defaultNutritionTargets,
   );
@@ -136,6 +175,7 @@ function Nutrition() {
   const [errorMessage, setErrorMessage] = useState("");
 
   const totals = useMemo(() => getTotals(entries), [entries]);
+  const isTodaySelected = date === todayKey;
 
   useEffect(() => {
     let isCurrent = true;
@@ -270,6 +310,16 @@ function Nutrition() {
     }));
   }
 
+  function updateDate(nextDate) {
+    if (!nextDate || nextDate > todayKey) {
+      return;
+    }
+
+    setNotice("");
+    setDate(nextDate);
+    setNewEntry(emptyNutritionEntry);
+  }
+
   return (
     <div className="page nutrition-page">
       <section className="page-heading">
@@ -277,6 +327,41 @@ function Nutrition() {
           <p className="eyebrow">Daily targets</p>
           <h1>Nutrition</h1>
           <p>Monitor calories, protein, fiber, and hydration.</p>
+        </div>
+
+        <div className="nutrition-date-control">
+          <div>
+            <CalendarDays size={18} />
+            <span>{formatSelectedDate(date)}</span>
+          </div>
+
+          <div>
+            <button
+              type="button"
+              aria-label="View previous day"
+              onClick={() => updateDate(shiftDateKey(date, -1))}
+            >
+              <ChevronLeft size={18} />
+            </button>
+
+            <input
+              type="date"
+              max={todayKey}
+              value={date}
+              onChange={(event) =>
+                updateDate(event.target.value)
+              }
+            />
+
+            <button
+              type="button"
+              aria-label="View next day"
+              disabled={isTodaySelected}
+              onClick={() => updateDate(shiftDateKey(date, 1))}
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
       </section>
 
@@ -393,7 +478,7 @@ function Nutrition() {
               <h2>Today’s food</h2>
               <p>
                 Add each food or drink once, and FitCircle
-                totals the day.
+                totals {formatSelectedDate(date).toLowerCase()}.
               </p>
             </div>
 

@@ -823,6 +823,67 @@ a {
   font-weight: 800;
 }
 
+.nutrition-date-control {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-width: 250px;
+}
+
+.nutrition-date-control > div:first-child {
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  gap: 8px;
+  color: var(--primary);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.nutrition-date-control > div:last-child {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) 42px;
+  gap: 8px;
+  padding: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.nutrition-date-control button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 11px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.nutrition-date-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.nutrition-date-control input {
+  min-width: 0;
+  color: var(--text);
+  color-scheme: dark;
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 11px;
+  outline: none;
+  padding-inline: 12px;
+}
+
+.nutrition-date-control input:focus,
+.nutrition-date-control button:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
 .nutrition-page__summary {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1306,6 +1367,18 @@ a {
 
   .nutrition-page__summary {
     grid-template-columns: 1fr;
+  }
+
+  .nutrition-page .page-heading {
+    flex-direction: column;
+  }
+
+  .nutrition-date-control {
+    width: 100%;
+  }
+
+  .nutrition-date-control > div:first-child {
+    justify-self: start;
   }
 
   .nutrition-entry-form {
