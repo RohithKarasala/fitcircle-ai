@@ -4,6 +4,8 @@ import {
   Flame,
   Leaf,
   LogIn,
+  Nut,
+  Pizza,
   Plus,
   Save,
   Trash2,
@@ -37,6 +39,18 @@ const nutritionMetrics = [
     label: "Protein",
     unit: "g",
     Icon: Dumbbell,
+  },
+  {
+    key: "carbs",
+    label: "Carbs",
+    unit: "g",
+    Icon: Pizza,
+  },
+  {
+    key: "fat",
+    label: "Fats",
+    unit: "g",
+    Icon: Nut,
   },
   {
     key: "fiber",
@@ -86,12 +100,16 @@ function getTotals(entries) {
     (totals, entry) => ({
       calories: totals.calories + toNumber(entry.calories),
       protein: totals.protein + toNumber(entry.protein),
+      carbs: totals.carbs + toNumber(entry.carbs),
+      fat: totals.fat + toNumber(entry.fat),
       fiber: totals.fiber + toNumber(entry.fiber),
       water: totals.water + toNumber(entry.water),
     }),
     {
       calories: 0,
       protein: 0,
+      carbs: 0,
+      fat: 0,
       fiber: 0,
       water: 0,
     },
@@ -433,6 +451,8 @@ function Nutrition() {
                   <span>Food</span>
                   <span>Cal</span>
                   <span>Protein</span>
+                  <span>Carbs</span>
+                  <span>Fats</span>
                   <span>Fiber</span>
                   <span>Water</span>
                   <span />
@@ -448,6 +468,8 @@ function Nutrition() {
                       {formatAmount(entry.calories, "cal")}
                     </span>
                     <span>{formatAmount(entry.protein, "g")}</span>
+                    <span>{formatAmount(entry.carbs, "g")}</span>
+                    <span>{formatAmount(entry.fat, "g")}</span>
                     <span>{formatAmount(entry.fiber, "g")}</span>
                     <span>{formatAmount(entry.water, "oz")}</span>
                     <button

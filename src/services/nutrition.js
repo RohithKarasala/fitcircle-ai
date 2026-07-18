@@ -3,6 +3,8 @@ import { supabase } from "./supabase";
 export const defaultNutritionTargets = {
   calories: 2200,
   protein: 160,
+  carbs: 220,
+  fat: 70,
   fiber: 30,
   water: 100,
 };
@@ -11,6 +13,8 @@ export const emptyNutritionEntry = {
   name: "",
   calories: "",
   protein: "",
+  carbs: "",
+  fat: "",
   fiber: "",
   water: "",
 };
@@ -45,6 +49,14 @@ function normalizeTargets(targets) {
       normalizeNumber(targets.protein, "protein target", {
         max: 500,
       }) ?? defaultNutritionTargets.protein,
+    carbs:
+      normalizeNumber(targets.carbs, "carb target", {
+        max: 1000,
+      }) ?? defaultNutritionTargets.carbs,
+    fat:
+      normalizeNumber(targets.fat, "fat target", {
+        max: 500,
+      }) ?? defaultNutritionTargets.fat,
     fiber:
       normalizeNumber(targets.fiber, "fiber target", {
         max: 150,
@@ -76,6 +88,12 @@ function normalizeEntry(entry) {
     protein: normalizeNumber(entry.protein, "protein", {
       max: 500,
     }),
+    carbs: normalizeNumber(entry.carbs, "carbs", {
+      max: 1000,
+    }),
+    fat: normalizeNumber(entry.fat, "fat", {
+      max: 500,
+    }),
     fiber: normalizeNumber(entry.fiber, "fiber", {
       max: 150,
     }),
@@ -93,6 +111,8 @@ function mapTargets(row) {
   return {
     calories: row.calorie_target ?? defaultNutritionTargets.calories,
     protein: row.protein_target_g ?? defaultNutritionTargets.protein,
+    carbs: row.carb_target_g ?? defaultNutritionTargets.carbs,
+    fat: row.fat_target_g ?? defaultNutritionTargets.fat,
     fiber: row.fiber_target_g ?? defaultNutritionTargets.fiber,
     water: row.water_target_oz ?? defaultNutritionTargets.water,
   };
@@ -104,6 +124,8 @@ function mapEntry(row) {
     name: row.name,
     calories: row.calories ?? "",
     protein: row.protein_g ?? "",
+    carbs: row.carbs_g ?? "",
+    fat: row.fat_g ?? "",
     fiber: row.fiber_g ?? "",
     water: row.water_oz ?? "",
   };
@@ -134,14 +156,14 @@ export async function getNutritionDay({
       supabase
         .from("nutrition_targets")
         .select(
-          "calorie_target, protein_target_g, fiber_target_g, water_target_oz",
+          "calorie_target, protein_target_g, carb_target_g, fat_target_g, fiber_target_g, water_target_oz",
         )
         .eq("user_id", userId)
         .maybeSingle(),
       supabase
         .from("nutrition_entries")
         .select(
-          "id, name, calories, protein_g, fiber_g, water_oz, created_at",
+          "id, name, calories, protein_g, carbs_g, fat_g, fiber_g, water_oz, created_at",
         )
         .eq("user_id", userId)
         .eq("log_date", date)
@@ -183,6 +205,8 @@ export async function saveNutritionTargets({
         user_id: userId,
         calorie_target: normalizedTargets.calories,
         protein_target_g: normalizedTargets.protein,
+        carb_target_g: normalizedTargets.carbs,
+        fat_target_g: normalizedTargets.fat,
         fiber_target_g: normalizedTargets.fiber,
         water_target_oz: normalizedTargets.water,
         updated_at: new Date().toISOString(),
@@ -192,7 +216,7 @@ export async function saveNutritionTargets({
       },
     )
     .select(
-      "calorie_target, protein_target_g, fiber_target_g, water_target_oz",
+      "calorie_target, protein_target_g, carb_target_g, fat_target_g, fiber_target_g, water_target_oz",
     )
     .single();
 
@@ -224,10 +248,14 @@ export async function addNutritionEntry({
       name: normalizedEntry.name,
       calories: normalizedEntry.calories,
       protein_g: normalizedEntry.protein,
+      carbs_g: normalizedEntry.carbs,
+      fat_g: normalizedEntry.fat,
       fiber_g: normalizedEntry.fiber,
       water_oz: normalizedEntry.water,
     })
-    .select("id, name, calories, protein_g, fiber_g, water_oz")
+    .select(
+      "id, name, calories, protein_g, carbs_g, fat_g, fiber_g, water_oz",
+    )
     .single();
 
   if (error) {

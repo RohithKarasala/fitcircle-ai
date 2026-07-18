@@ -825,7 +825,7 @@ a {
 
 .nutrition-page__summary {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
 }
 
@@ -960,7 +960,7 @@ a {
   display: grid;
   grid-template-columns:
     minmax(190px, 1.4fr)
-    repeat(4, minmax(100px, 0.7fr))
+    repeat(6, minmax(88px, 0.7fr))
     auto;
   align-items: end;
   gap: 12px;
@@ -1003,7 +1003,7 @@ a {
   display: grid;
   grid-template-columns:
     minmax(160px, 1fr)
-    repeat(4, minmax(76px, 0.45fr))
+    repeat(6, minmax(70px, 0.45fr))
     44px;
   align-items: center;
   gap: 10px;
@@ -1350,10 +1350,18 @@ a {
   }
 
   .nutrition-entry-row span:nth-of-type(3)::before {
-    content: "Fiber";
+    content: "Carbs";
   }
 
   .nutrition-entry-row span:nth-of-type(4)::before {
+    content: "Fats";
+  }
+
+  .nutrition-entry-row span:nth-of-type(5)::before {
+    content: "Fiber";
+  }
+
+  .nutrition-entry-row span:nth-of-type(6)::before {
     content: "Water";
   }
 
