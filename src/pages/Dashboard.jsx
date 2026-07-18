@@ -5,9 +5,9 @@ import {
   Dumbbell,
   LoaderCircle,
   Pencil,
-  Flame,
   Save,
   Scale,
+  Salad,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -15,7 +15,6 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../context/useAuth";
 import {
   defaultWorkoutSchedule,
-  getWeekdayKey,
   getTodayWorkoutKey,
   normalizeWorkoutSchedule,
   workoutProgram,
@@ -25,6 +24,11 @@ import {
   updateCurrentWeight,
 } from "../services/profile";
 import { getUserWorkoutHistory } from "../services/workouts";
+import {
+  defaultNutritionTargets,
+  getNutritionDay,
+  getTodayKey,
+} from "../services/nutrition";
 
 function getTimeBasedGreeting(date = new Date()) {
   const hour = date.getHours();
@@ -57,17 +61,31 @@ function getWeekStart(value = new Date()) {
   return date;
 }
 
-function hasSessionThisWeek(sessions) {
+function getDateKey(value = new Date()) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return getTodayKey();
+  }
+
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
+
+  return new Date(date.getTime() - timezoneOffset)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getCompletedWorkoutDatesThisWeek(sessions) {
   const weekStart = getWeekStart();
 
   if (!weekStart) {
-    return false;
+    return new Set();
   }
 
   const nextWeekStart = new Date(weekStart);
   nextWeekStart.setDate(weekStart.getDate() + 7);
 
-  return sessions.some((session) => {
+  return new Set(sessions.filter((session) => {
     const date = new Date(session.date);
 
     return (
@@ -75,7 +93,20 @@ function hasSessionThisWeek(sessions) {
       date >= weekStart &&
       date < nextWeekStart
     );
-  });
+  }).map((session) => getDateKey(session.date)));
+}
+
+function getNutritionTotals(entries) {
+  return entries.reduce(
+    (totals, entry) => ({
+      calories: totals.calories + Number(entry.calories || 0),
+      protein: totals.protein + Number(entry.protein || 0),
+    }),
+    {
+      calories: 0,
+      protein: 0,
+    },
+  );
 }
 
 function Dashboard() {
@@ -97,6 +128,15 @@ function Dashboard() {
   const [trackRir, setTrackRir] = useState(false);
   const [isTodayWorkoutFinished, setIsTodayWorkoutFinished] =
     useState(false);
+  const [completedWorkoutDates, setCompletedWorkoutDates] =
+    useState(new Set());
+  const [nutritionTotals, setNutritionTotals] = useState({
+    calories: 0,
+    protein: 0,
+  });
+  const [nutritionTargets, setNutritionTargets] = useState(
+    defaultNutritionTargets,
+  );
 
   const today = new Intl.DateTimeFormat("en-US", {
     weekday: "long",
@@ -112,8 +152,15 @@ function Dashboard() {
     "there";
 
   const greeting = getTimeBasedGreeting();
+  const todayKey = getTodayKey();
   const todayWorkoutKey = getTodayWorkoutKey(workoutSchedule);
   const todayWorkout = workoutProgram[todayWorkoutKey];
+  const completedThisWeek = completedWorkoutDates.size;
+  const weeklyWorkoutTarget = 5;
+  const remainingWorkoutsThisWeek = Math.max(
+    0,
+    weeklyWorkoutTarget - completedThisWeek,
+  );
   const isRecoveryWorkout =
     todayWorkout.exercises.every(
       (exercise) => exercise.trackingType === "completion",
@@ -130,6 +177,12 @@ function Dashboard() {
         setWorkoutSchedule(defaultWorkoutSchedule);
         setTrackRir(false);
         setIsTodayWorkoutFinished(false);
+        setCompletedWorkoutDates(new Set());
+        setNutritionTotals({
+          calories: 0,
+          protein: 0,
+        });
+        setNutritionTargets(defaultNutritionTargets);
         return;
       }
 
@@ -137,12 +190,21 @@ function Dashboard() {
       setWeightError("");
 
       try {
-        const [profile, todaySessions] = await Promise.all([
+        const [profile, todaySessions, weekSessions, nutrition] =
+          await Promise.all([
           getCurrentUserProfile(user.id),
           getUserWorkoutHistory({
             userId: user.id,
-            workoutDay: getWeekdayKey(),
+            workoutDate: todayKey,
             limit: 10,
+          }),
+          getUserWorkoutHistory({
+            userId: user.id,
+            limit: 75,
+          }),
+          getNutritionDay({
+            userId: user.id,
+            date: todayKey,
           }),
         ]);
 
@@ -160,9 +222,14 @@ function Dashboard() {
           ),
         );
         setTrackRir(Boolean(profile?.trackRir));
-        setIsTodayWorkoutFinished(
-          hasSessionThisWeek(todaySessions),
+        setIsTodayWorkoutFinished(todaySessions.length > 0);
+        setCompletedWorkoutDates(
+          getCompletedWorkoutDatesThisWeek(weekSessions),
         );
+        setNutritionTotals(
+          getNutritionTotals(nutrition.entries),
+        );
+        setNutritionTargets(nutrition.targets);
         setCurrentWeight(nextWeight);
         setWeightInput(
           nextWeight === null ? "" : String(nextWeight),
@@ -183,7 +250,7 @@ function Dashboard() {
     return () => {
       isCurrent = false;
     };
-  }, [user]);
+  }, [todayKey, user]);
 
   async function handleSaveWeight(event) {
     event.preventDefault();
@@ -388,12 +455,24 @@ function Dashboard() {
 
         <article className="card stat-card">
           <div className="stat-card__icon">
-            <Flame size={20} />
+            <Salad size={20} />
           </div>
 
-          <span>Workout streak</span>
-          <strong>5 days</strong>
-          <small>Keep building consistency</small>
+          <span>Today’s nutrition</span>
+          <strong>
+            {Math.round(nutritionTotals.calories)} cal
+          </strong>
+          <small>
+            {Math.round(nutritionTotals.protein)}g protein ·{" "}
+            {Math.max(
+              0,
+              Math.round(
+                nutritionTargets.calories -
+                  nutritionTotals.calories,
+              ),
+            )}{" "}
+            cal left
+          </small>
         </article>
 
         <article className="card stat-card">
@@ -402,8 +481,16 @@ function Dashboard() {
           </div>
 
           <span>This week</span>
-          <strong>3 of 5</strong>
-          <small>Two sessions remaining</small>
+          <strong>
+            {completedThisWeek} of {weeklyWorkoutTarget}
+          </strong>
+          <small>
+            {remainingWorkoutsThisWeek === 0
+              ? "Weekly target reached"
+              : `${remainingWorkoutsThisWeek} session${
+                  remainingWorkoutsThisWeek === 1 ? "" : "s"
+                } remaining`}
+          </small>
         </article>
 
         <article className="card card--wide">
