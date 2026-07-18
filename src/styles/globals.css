@@ -1466,6 +1466,49 @@ a {
   gap: 10px;
 }
 
+.workout-week-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+.workout-week-control > div {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.workout-week-control button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  color: var(--text);
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 11px;
+  cursor: pointer;
+  place-items: center;
+}
+
+.workout-week-control button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
+.workout-week-control button:focus-visible {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
 .primary-action-button,
 .secondary-button {
   display: inline-flex;
@@ -1519,6 +1562,7 @@ a {
 }
 
 .day-selector__button span,
+.day-selector__button em,
 .day-selector__button small {
   display: block;
 }
@@ -1537,6 +1581,14 @@ a {
   white-space: nowrap;
 }
 
+.day-selector__button em {
+  margin-top: 2px;
+  color: #8b95a3;
+  font-size: 0.68rem;
+  font-style: normal;
+  font-weight: 800;
+}
+
 .day-selector__button:hover {
   color: var(--text);
   background: var(--surface-hover);
@@ -1552,6 +1604,10 @@ a {
   color: #b39f64;
 }
 
+.day-selector__button--draft em {
+  color: #d7bd69;
+}
+
 .day-selector__button--finished {
   color: var(--primary);
   background: #121a10;
@@ -1560,6 +1616,10 @@ a {
 
 .day-selector__button--finished small {
   color: #8fae5d;
+}
+
+.day-selector__button--finished em {
+  color: #a8cf69;
 }
 
 .day-selector__button--active {

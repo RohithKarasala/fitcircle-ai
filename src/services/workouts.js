@@ -156,6 +156,7 @@ export async function saveWorkoutSession({
   workoutName,
   workout,
   workoutSets,
+  workoutDate,
   notes = "",
 }) {
   if (!userId) {
@@ -184,7 +185,9 @@ export async function saveWorkoutSession({
       .from("workout_sessions")
       .insert({
         user_id: userId,
-        workout_date: new Date().toISOString(),
+        workout_date: workoutDate
+          ? `${workoutDate}T12:00:00`
+          : new Date().toISOString(),
         workout_day: workoutDay,
         workout_name: workoutName,
         notes: notes || null,
@@ -231,6 +234,7 @@ export async function saveWorkoutSession({
 export async function getUserWorkoutHistory({
   userId,
   workoutDay,
+  workoutDate,
   limit = 10,
 }) {
   if (!userId) {
@@ -251,6 +255,12 @@ export async function getUserWorkoutHistory({
       "workout_day",
       workoutDay,
     );
+  }
+
+  if (workoutDate) {
+    sessionsQuery = sessionsQuery
+      .gte("workout_date", `${workoutDate}T00:00:00`)
+      .lt("workout_date", `${workoutDate}T23:59:59.999`);
   }
 
   const { data: sessions, error: sessionsError } =
@@ -303,7 +313,7 @@ export async function getUserWorkoutDrafts({ userId }) {
   const { data, error } = await supabase
     .from("workout_drafts")
     .select(
-      "id, workout_day, workout_name, workout_key, workout_payload, updated_at",
+      "id, workout_day, workout_date, workout_name, workout_key, workout_payload, updated_at",
     )
     .eq("user_id", userId)
     .order("updated_at", { ascending: false });
@@ -317,6 +327,7 @@ export async function getUserWorkoutDrafts({ userId }) {
   return (data ?? []).map((draft) => ({
     id: draft.id,
     workoutDay: draft.workout_day,
+    workoutDate: draft.workout_date,
     workoutName: draft.workout_name,
     workoutKey: draft.workout_key,
     workoutPayload: draft.workout_payload ?? {},
@@ -327,6 +338,7 @@ export async function getUserWorkoutDrafts({ userId }) {
 export async function upsertWorkoutDraft({
   userId,
   workoutDay,
+  workoutDate,
   workoutName,
   workoutKey,
   workout,
@@ -337,27 +349,74 @@ export async function upsertWorkoutDraft({
   }
 
   const updatedAt = new Date().toISOString();
+  const draftRow = {
+    user_id: userId,
+    workout_day: workoutDay,
+    workout_date: workoutDate ?? null,
+    workout_name: workoutName,
+    workout_key: workoutKey,
+    workout_payload: {
+      workout,
+      workoutSets,
+    },
+    updated_at: updatedAt,
+  };
+
+  if (workoutDate) {
+    const { data: existingDraft, error: loadError } =
+      await supabase
+        .from("workout_drafts")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("workout_date", workoutDate)
+        .maybeSingle();
+
+    if (loadError) {
+      throw new Error(
+        `Unable to load workout draft: ${loadError.message}`,
+      );
+    }
+
+    const query = existingDraft
+      ? supabase
+          .from("workout_drafts")
+          .update(draftRow)
+          .eq("id", existingDraft.id)
+      : supabase.from("workout_drafts").insert(draftRow);
+
+    const { data, error } = await query
+      .select(
+        "id, workout_day, workout_date, workout_name, workout_key, workout_payload, updated_at",
+      )
+      .single();
+
+    if (error) {
+      throw new Error(
+        `Unable to auto-save workout draft: ${error.message}`,
+      );
+    }
+
+    return {
+      id: data.id,
+      workoutDay: data.workout_day,
+      workoutDate: data.workout_date,
+      workoutName: data.workout_name,
+      workoutKey: data.workout_key,
+      workoutPayload: data.workout_payload ?? {},
+      updatedAt: data.updated_at,
+    };
+  }
 
   const { data, error } = await supabase
     .from("workout_drafts")
     .upsert(
-      {
-        user_id: userId,
-        workout_day: workoutDay,
-        workout_name: workoutName,
-        workout_key: workoutKey,
-        workout_payload: {
-          workout,
-          workoutSets,
-        },
-        updated_at: updatedAt,
-      },
+      draftRow,
       {
         onConflict: "user_id,workout_day",
       },
     )
     .select(
-      "id, workout_day, workout_name, workout_key, workout_payload, updated_at",
+      "id, workout_day, workout_date, workout_name, workout_key, workout_payload, updated_at",
     )
     .single();
 
@@ -370,6 +429,7 @@ export async function upsertWorkoutDraft({
   return {
     id: data.id,
     workoutDay: data.workout_day,
+    workoutDate: data.workout_date,
     workoutName: data.workout_name,
     workoutKey: data.workout_key,
     workoutPayload: data.workout_payload ?? {},
@@ -380,16 +440,22 @@ export async function upsertWorkoutDraft({
 export async function deleteWorkoutDraft({
   userId,
   workoutDay,
+  workoutDate,
 }) {
-  if (!userId || !workoutDay) {
+  if (!userId || (!workoutDay && !workoutDate)) {
     return;
   }
 
-  const { error } = await supabase
+  let query = supabase
     .from("workout_drafts")
     .delete()
-    .eq("user_id", userId)
-    .eq("workout_day", workoutDay);
+    .eq("user_id", userId);
+
+  query = workoutDate
+    ? query.eq("workout_date", workoutDate)
+    : query.eq("workout_day", workoutDay);
+
+  const { error } = await query;
 
   if (error) {
     throw new Error(

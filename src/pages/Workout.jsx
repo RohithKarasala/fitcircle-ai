@@ -1,5 +1,8 @@
 import {
+  CalendarDays,
   Check,
+  ChevronLeft,
+  ChevronRight,
   Cloud,
   LoaderCircle,
   LogIn,
@@ -117,9 +120,9 @@ function getDrafts() {
   }
 }
 
-function getDraftForDay(day, workout) {
+function getDraftForKey(draftKey, workout) {
   const drafts = getDrafts();
-  const draft = drafts[day];
+  const draft = drafts[draftKey];
   const exerciseIds = workout.exercises.map(
     (exercise) => exercise.id,
   );
@@ -139,19 +142,19 @@ function getDraftForDay(day, workout) {
   return draft.workoutSets;
 }
 
-function getLocalWorkoutForDay(day, fallbackWorkout) {
+function getLocalWorkoutForKey(draftKey, fallbackWorkout) {
   const drafts = getDrafts();
-  const draftWorkout = drafts[day]?.workout;
+  const draftWorkout = drafts[draftKey]?.workout;
 
   return draftWorkout?.exercises?.length
     ? draftWorkout
     : fallbackWorkout;
 }
 
-function saveDraftForDay(day, workoutSets, workout) {
+function saveDraftForKey(draftKey, workoutSets, workout) {
   const drafts = getDrafts();
 
-  drafts[day] = {
+  drafts[draftKey] = {
     savedAt: new Date().toISOString(),
     workout,
     workoutSets,
@@ -163,10 +166,10 @@ function saveDraftForDay(day, workoutSets, workout) {
   );
 }
 
-function clearDraftForDay(day) {
+function clearDraftForKey(draftKey) {
   const drafts = getDrafts();
 
-  delete drafts[day];
+  delete drafts[draftKey];
 
   localStorage.setItem(
     DRAFT_STORAGE_KEY,
@@ -230,29 +233,70 @@ function getWeekStart(value = new Date()) {
   return date;
 }
 
-function getFinishedDaysThisWeek(sessions) {
-  const weekStart = getWeekStart();
+function getDateKey(value = new Date()) {
+  const date = new Date(value);
 
-  if (!weekStart) {
-    return new Set();
+  if (Number.isNaN(date.getTime())) {
+    return getTodayKey();
   }
 
-  const nextWeekStart = new Date(weekStart);
-  nextWeekStart.setDate(weekStart.getDate() + 7);
+  const timezoneOffset = date.getTimezoneOffset() * 60000;
 
+  return new Date(date.getTime() - timezoneOffset)
+    .toISOString()
+    .slice(0, 10);
+}
+
+function getTodayKey() {
+  return getDateKey(new Date());
+}
+
+function getDateFromKey(dateKey) {
+  return new Date(`${dateKey}T00:00:00`);
+}
+
+function shiftDateKey(dateKey, amount) {
+  const date = getDateFromKey(dateKey);
+  date.setDate(date.getDate() + amount);
+
+  return getDateKey(date);
+}
+
+function getWeekDateKeys(dateKey) {
+  const weekStart = getWeekStart(getDateFromKey(dateKey));
+
+  if (!weekStart) {
+    return weekDays.map((_, index) =>
+      shiftDateKey(getTodayKey(), index),
+    );
+  }
+
+  return weekDays.map((_, index) => {
+    const date = new Date(weekStart);
+    date.setDate(weekStart.getDate() + index);
+
+    return getDateKey(date);
+  });
+}
+
+function getFinishedDates(sessions) {
   return new Set(
-    sessions
-      .filter((session) => {
-        const date = new Date(session.date);
-
-        return (
-          !Number.isNaN(date.getTime()) &&
-          date >= weekStart &&
-          date < nextWeekStart
-        );
-      })
-      .map((session) => session.day),
+    sessions.map((session) => getDateKey(session.date)),
   );
+}
+
+function formatShortDate(dateKey) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(getDateFromKey(dateKey));
+}
+
+function formatWeekRange(dateKeys) {
+  const firstDate = dateKeys[0];
+  const lastDate = dateKeys[dateKeys.length - 1];
+
+  return `${formatShortDate(firstDate)} - ${formatShortDate(lastDate)}`;
 }
 
 function isSameWorkout(firstWorkout, secondWorkout) {
@@ -443,17 +487,18 @@ function ExerciseEditorModal({
   );
 }
 
-function getLocalDraftDays(workoutSchedule) {
+function getLocalDraftDates(workoutSchedule, weekDateKeys) {
   return new Set(
-    weekDays.filter((day) => {
+    weekDateKeys.filter((dateKey) => {
+      const day = getWeekdayKey(getDateFromKey(dateKey));
       const workoutKey =
         workoutSchedule[day] ?? defaultWorkoutSchedule[day];
       const baseWorkout = workoutProgram[workoutKey];
-      const draftWorkout = getLocalWorkoutForDay(
-        day,
+      const draftWorkout = getLocalWorkoutForKey(
+        dateKey,
         baseWorkout,
       );
-      const draftSets = getDraftForDay(day, draftWorkout);
+      const draftSets = getDraftForKey(dateKey, draftWorkout);
 
       return (
         hasWorkoutEntries(draftSets) ||
@@ -467,8 +512,12 @@ function Workout() {
   const { user, isLoading: isAuthLoading, signInWithGoogle } =
     useAuth();
 
+  const todayKey = getTodayKey();
   const initialDay = getWeekdayKey();
+  const initialDate = todayKey;
 
+  const [selectedDate, setSelectedDate] =
+    useState(initialDate);
   const [selectedDay, setSelectedDay] =
     useState(initialDay);
   const [workoutSchedule, setWorkoutSchedule] = useState(
@@ -476,13 +525,13 @@ function Workout() {
   );
   const initialWorkoutKey =
     workoutSchedule[initialDay] ?? initialDay;
-  const initialWorkout = getLocalWorkoutForDay(
-    initialDay,
+  const initialWorkout = getLocalWorkoutForKey(
+    initialDate,
     workoutProgram[initialWorkoutKey],
   );
 
   const [workoutSets, setWorkoutSets] = useState(() =>
-    getDraftForDay(initialDay, initialWorkout),
+    getDraftForKey(initialDate, initialWorkout),
   );
   const [customWorkout, setCustomWorkout] = useState(
     initialWorkout,
@@ -492,11 +541,11 @@ function Workout() {
   const [isHistoryLoading, setIsHistoryLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const [remoteDraftsByDay, setRemoteDraftsByDay] =
+  const [remoteDraftsByDate, setRemoteDraftsByDate] =
     useState({});
   const [hasLoadedRemoteDrafts, setHasLoadedRemoteDrafts] =
     useState(false);
-  const [finishedDays, setFinishedDays] = useState(new Set());
+  const [finishedDates, setFinishedDates] = useState(new Set());
   const [draftSaveStatus, setDraftSaveStatus] =
     useState("idle");
   const [sharingSessionId, setSharingSessionId] =
@@ -523,9 +572,21 @@ function Workout() {
   const isCompletionWorkout = workout.exercises.every(
     (exercise) => exercise.trackingType === "completion",
   );
-  const localDraftDays = useMemo(
-    () => getLocalDraftDays(workoutSchedule),
-    [workoutSchedule],
+  const selectedWeekDateKeys = useMemo(
+    () => getWeekDateKeys(selectedDate),
+    [selectedDate],
+  );
+  const currentWeekStartKey = getWeekDateKeys(todayKey)[0];
+  const selectedWeekStartKey = selectedWeekDateKeys[0];
+  const canMoveToNextWeek =
+    selectedWeekStartKey < currentWeekStartKey;
+  const localDraftDates = useMemo(
+    () =>
+      getLocalDraftDates(
+        workoutSchedule,
+        selectedWeekDateKeys,
+      ),
+    [selectedWeekDateKeys, workoutSchedule],
   );
   const selectedDayHasEntries =
     hasWorkoutEntries(workoutSets);
@@ -567,20 +628,24 @@ function Workout() {
         const schedule = normalizeWorkoutSchedule(
           profile?.workoutSchedule,
         );
+        const todayDate = getTodayKey();
         const today = getWeekdayKey();
         const scheduledWorkoutKey = getTodayWorkoutKey(
           schedule,
         );
-        const todayWorkout = getLocalWorkoutForDay(
-          today,
+        const todayWorkout = getLocalWorkoutForKey(
+          todayDate,
           workoutProgram[scheduledWorkoutKey],
         );
 
         setTrackRir(Boolean(profile?.trackRir));
         setWorkoutSchedule(schedule);
+        setSelectedDate(todayDate);
         setSelectedDay(today);
         setCustomWorkout(todayWorkout);
-        setWorkoutSets(getDraftForDay(today, todayWorkout));
+        setWorkoutSets(
+          getDraftForKey(todayDate, todayWorkout),
+        );
         appliedScheduleUserIdRef.current = user.id;
       } catch (error) {
         console.error(error);
@@ -632,8 +697,8 @@ function Workout() {
 
   const loadWorkoutStatus = useCallback(async () => {
     if (!user) {
-      setRemoteDraftsByDay({});
-      setFinishedDays(new Set());
+      setRemoteDraftsByDate({});
+      setFinishedDates(new Set());
       setHasLoadedRemoteDrafts(false);
       return;
     }
@@ -648,14 +713,18 @@ function Workout() {
       ]);
 
       const draftMap = Object.fromEntries(
-        drafts.map((draft) => [draft.workoutDay, draft]),
+        drafts.map((draft) => [
+          draft.workoutDate ?? draft.workoutDay,
+          draft,
+        ]),
       );
 
-      setRemoteDraftsByDay(draftMap);
-      setFinishedDays(getFinishedDaysThisWeek(sessions));
+      setRemoteDraftsByDate(draftMap);
+      setFinishedDates(getFinishedDates(sessions));
       setHasLoadedRemoteDrafts(true);
 
-      const selectedDraft = draftMap[selectedDay];
+      const selectedDraft =
+        draftMap[selectedDate] ?? draftMap[selectedDay];
 
       if (selectedDraft) {
         const selectedDraftWorkoutKey =
@@ -684,15 +753,15 @@ function Workout() {
       setHasLoadedRemoteDrafts(true);
       setErrorMessage(error.message);
     }
-  }, [selectedDay, user, workoutSchedule]);
+  }, [selectedDate, selectedDay, user, workoutSchedule]);
 
   useEffect(() => {
     Promise.resolve().then(loadWorkoutStatus);
   }, [loadWorkoutStatus]);
 
   useEffect(() => {
-    saveDraftForDay(selectedDay, workoutSets, workout);
-  }, [selectedDay, workout, workoutSets]);
+    saveDraftForKey(selectedDate, workoutSets, workout);
+  }, [selectedDate, workout, workoutSets]);
 
   useEffect(() => {
     if (!user || !hasLoadedRemoteDrafts) {
@@ -710,11 +779,12 @@ function Workout() {
           await deleteWorkoutDraft({
             userId: user.id,
             workoutDay: selectedDay,
+            workoutDate: selectedDate,
           });
 
-          setRemoteDraftsByDay((current) => {
+          setRemoteDraftsByDate((current) => {
             const nextDrafts = { ...current };
-            delete nextDrafts[selectedDay];
+            delete nextDrafts[selectedDate];
             return nextDrafts;
           });
           setDraftSaveStatus("idle");
@@ -723,16 +793,17 @@ function Workout() {
 
         const savedDraft = await upsertWorkoutDraft({
           userId: user.id,
-        workoutDay: selectedDay,
-        workoutName: workout.name,
-        workoutKey: selectedWorkoutKey,
-        workout,
-        workoutSets,
-      });
+          workoutDay: selectedDay,
+          workoutDate: selectedDate,
+          workoutName: workout.name,
+          workoutKey: selectedWorkoutKey,
+          workout,
+          workoutSets,
+        });
 
-        setRemoteDraftsByDay((current) => ({
+        setRemoteDraftsByDate((current) => ({
           ...current,
-          [selectedDay]: savedDraft,
+          [selectedDate]: savedDraft,
         }));
         setDraftSaveStatus("saved");
       } catch (error) {
@@ -744,6 +815,7 @@ function Workout() {
     return () => window.clearTimeout(timeoutId);
   }, [
     hasLoadedRemoteDrafts,
+    selectedDate,
     selectedDay,
     selectedDayHasEntries,
     selectedWorkoutChanged,
@@ -766,21 +838,24 @@ function Workout() {
   const totalSets =
     Object.values(workoutSets).flat().length;
 
-  const changeWorkoutDay = (day) => {
+  const changeWorkoutDate = (dateKey) => {
+    const day = getWeekdayKey(getDateFromKey(dateKey));
     const nextWorkoutKey =
       workoutSchedule[day] ?? defaultWorkoutSchedule[day];
     const baseNextWorkout = workoutProgram[nextWorkoutKey];
-    const remoteDraft = remoteDraftsByDay[day];
+    const remoteDraft =
+      remoteDraftsByDate[dateKey] ?? remoteDraftsByDate[day];
     const nextWorkout = remoteDraft
       ? getWorkoutFromDraft(remoteDraft, baseNextWorkout)
-      : getLocalWorkoutForDay(day, baseNextWorkout);
+      : getLocalWorkoutForKey(dateKey, baseNextWorkout);
 
+    setSelectedDate(dateKey);
     setSelectedDay(day);
     setCustomWorkout(nextWorkout);
     setWorkoutSets(
       remoteDraft
         ? getWorkoutStateFromDraft(remoteDraft, nextWorkout)
-        : getDraftForDay(day, nextWorkout),
+        : getDraftForKey(dateKey, nextWorkout),
     );
     setStatusMessage("");
     setErrorMessage("");
@@ -935,12 +1010,12 @@ function Workout() {
       return;
     }
 
-    clearDraftForDay(selectedDay);
+    clearDraftForKey(selectedDate);
     setCustomWorkout(baseWorkout);
     setWorkoutSets(createWorkoutState(baseWorkout));
-    setRemoteDraftsByDay((current) => {
+    setRemoteDraftsByDate((current) => {
       const nextDrafts = { ...current };
-      delete nextDrafts[selectedDay];
+      delete nextDrafts[selectedDate];
       return nextDrafts;
     });
     setStatusMessage("");
@@ -952,6 +1027,7 @@ function Workout() {
         await deleteWorkoutDraft({
           userId: user.id,
           workoutDay: selectedDay,
+          workoutDate: selectedDate,
         });
       } catch (error) {
         console.error(error);
@@ -986,6 +1062,7 @@ function Workout() {
       const savedSession = await saveWorkoutSession({
         userId: user.id,
         workoutDay: selectedDay,
+        workoutDate: selectedDate,
         workoutName: workout.name,
         workout,
         workoutSets,
@@ -1017,20 +1094,21 @@ function Workout() {
           autoShareGroups.length - failedShareCount;
       }
 
-      clearDraftForDay(selectedDay);
+      clearDraftForKey(selectedDate);
       await deleteWorkoutDraft({
         userId: user.id,
         workoutDay: selectedDay,
+        workoutDate: selectedDate,
       });
-      setRemoteDraftsByDay((current) => {
+      setRemoteDraftsByDate((current) => {
         const nextDrafts = { ...current };
-        delete nextDrafts[selectedDay];
+        delete nextDrafts[selectedDate];
         return nextDrafts;
       });
-      setFinishedDays((current) => {
-        const nextDays = new Set(current);
-        nextDays.add(selectedDay);
-        return nextDays;
+      setFinishedDates((current) => {
+        const nextDates = new Set(current);
+        nextDates.add(selectedDate);
+        return nextDates;
       });
       setCustomWorkout(baseWorkout);
       setWorkoutSets(createWorkoutState(baseWorkout));
@@ -1107,17 +1185,20 @@ function Workout() {
     () => history,
     [history],
   );
-  const selectedDayFinished = finishedDays.has(selectedDay);
-  const getDayState = (day) => {
-    if (finishedDays.has(day)) {
+  const selectedDayFinished = finishedDates.has(selectedDate);
+  const getDateState = (dateKey) => {
+    const day = getWeekdayKey(getDateFromKey(dateKey));
+
+    if (finishedDates.has(dateKey)) {
       return "finished";
     }
 
     if (
-      (day === selectedDay && selectedDayHasEntries) ||
-      (day === selectedDay && selectedWorkoutChanged) ||
-      remoteDraftsByDay[day] ||
-      localDraftDays.has(day)
+      (dateKey === selectedDate && selectedDayHasEntries) ||
+      (dateKey === selectedDate && selectedWorkoutChanged) ||
+      remoteDraftsByDate[dateKey] ||
+      remoteDraftsByDate[day] ||
+      localDraftDates.has(dateKey)
     ) {
       return "draft";
     }
@@ -1127,7 +1208,7 @@ function Workout() {
 
   const draftStatusText = {
     idle: selectedDayFinished
-      ? "Completed this week"
+      ? "Completed"
       : selectedDayHasEntries
       ? "Draft saved locally"
       : selectedWorkoutChanged
@@ -1212,27 +1293,58 @@ function Workout() {
         </section>
       )}
 
+      <section className="workout-week-control">
+        <button
+          type="button"
+          aria-label="View previous week"
+          onClick={() =>
+            changeWorkoutDate(shiftDateKey(selectedDate, -7))
+          }
+        >
+          <ChevronLeft size={18} />
+        </button>
+
+        <div>
+          <CalendarDays size={18} />
+          <span>{formatWeekRange(selectedWeekDateKeys)}</span>
+        </div>
+
+        <button
+          type="button"
+          aria-label="View next week"
+          disabled={!canMoveToNextWeek}
+          onClick={() =>
+            changeWorkoutDate(shiftDateKey(selectedDate, 7))
+          }
+        >
+          <ChevronRight size={18} />
+        </button>
+      </section>
+
       <section
         className="day-selector"
         aria-label="Select workout day"
       >
-        {weekDays.map((day) => {
-          const dayState = getDayState(day);
+        {selectedWeekDateKeys.map((dateKey) => {
+          const day = getWeekdayKey(getDateFromKey(dateKey));
+          const dayState = getDateState(dateKey);
 
           return (
             <button
               type="button"
-              key={day}
+              key={dateKey}
               className={`day-selector__button day-selector__button--${dayState} ${
-                selectedDay === day
+                selectedDate === dateKey
                   ? "day-selector__button--active"
                   : ""
               }`}
-              onClick={() => changeWorkoutDay(day)}
+              onClick={() => changeWorkoutDate(dateKey)}
             >
               <span>
                 {weekDayLabels[day].slice(0, 3)}
               </span>
+
+              <em>{formatShortDate(dateKey)}</em>
 
               <small>
                 {
