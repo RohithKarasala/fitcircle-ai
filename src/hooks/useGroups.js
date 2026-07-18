@@ -10,6 +10,7 @@ import {
   getGroupById,
   getGroupMembers,
   getGroupWorkoutFeed,
+  getRecentGroupActivity,
   getUserGroups,
   joinGroup,
   leaveGroup,
@@ -48,6 +49,8 @@ export const groupQueryKeys = {
     groupId,
     options,
   ],
+
+  activity: () => [...groupQueryKeys.all, "activity"],
 };
 
 export function useGroups(options = {}) {
@@ -82,6 +85,14 @@ export function useGroupWorkoutFeed(
     queryKey: groupQueryKeys.feed(groupId, options),
     queryFn: () => getGroupWorkoutFeed(groupId, options),
     enabled: Boolean(groupId),
+  });
+}
+
+export function useGroupActivity(options = {}) {
+  return useQuery({
+    queryKey: groupQueryKeys.activity(),
+    queryFn: () => getRecentGroupActivity({ limit: 8 }),
+    ...options,
   });
 }
 

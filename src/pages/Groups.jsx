@@ -30,21 +30,6 @@ function Groups() {
     navigate(`/groups/${groupId}`);
   }
 
-  async function copyInviteCode(inviteCode) {
-    try {
-      await navigator.clipboard.writeText(inviteCode);
-      setNotice("Invite code copied.");
-
-      window.setTimeout(() => {
-        setNotice("");
-      }, 2500);
-    } catch {
-      setNotice(
-        `Copy failed. Invite code: ${inviteCode}`
-      );
-    }
-  }
-
   function handleGroupCreated(groupId) {
     setNotice("Group created successfully.");
     openGroup(groupId);
@@ -165,7 +150,6 @@ function Groups() {
                   key={group.groupId}
                   group={group}
                   onOpen={openGroup}
-                  onCopyInvite={copyInviteCode}
                 />
               ))}
             </div>

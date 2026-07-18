@@ -213,6 +213,129 @@ a {
   background: var(--surface-hover);
 }
 
+.topbar-notifications {
+  position: relative;
+}
+
+.topbar-notifications__button {
+  position: relative;
+}
+
+.topbar-notifications__dot {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  display: grid;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  color: #101409;
+  background: var(--primary);
+  border: 2px solid #090b0f;
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+  place-items: center;
+}
+
+.topbar-notifications__panel {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  z-index: 90;
+  width: min(360px, calc(100vw - 36px));
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 22px 70px rgb(0 0 0 / 42%);
+}
+
+.topbar-notifications__heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.topbar-notifications__heading strong,
+.topbar-notifications__heading span {
+  display: block;
+}
+
+.topbar-notifications__heading strong {
+  font-size: 0.92rem;
+}
+
+.topbar-notifications__heading span {
+  color: var(--muted);
+  font-size: 0.74rem;
+}
+
+.topbar-notifications__empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  padding: 14px;
+  color: var(--muted);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  font-size: 0.82rem;
+}
+
+.topbar-notifications__list {
+  display: grid;
+  gap: 8px;
+}
+
+.topbar-notifications__item {
+  display: grid;
+  width: 100%;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  padding: 11px;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.topbar-notifications__item:hover {
+  border-color: #4b5d2f;
+}
+
+.topbar-notifications__item > span {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  color: var(--primary);
+  background: #202a15;
+  border-radius: 9px;
+  place-items: center;
+}
+
+.topbar-notifications__item strong,
+.topbar-notifications__item small {
+  display: block;
+}
+
+.topbar-notifications__item strong {
+  font-size: 0.82rem;
+  line-height: 1.35;
+}
+
+.topbar-notifications__item small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
 .app-content {
   width: min(1240px, 100%);
   margin: 0 auto;
@@ -2476,35 +2599,6 @@ input:-webkit-autofill:focus {
   margin-top: 8px;
   color: var(--muted);
   font-size: 0.78rem;
-}
-
-.group-card__invite {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 13px;
-  background: #0e1115;
-  border: 1px solid var(--border);
-  border-radius: 11px;
-}
-
-.group-card__invite-label {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.group-card__invite-code {
-  color: var(--text);
-  font-family:
-    ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.86rem;
-  letter-spacing: 0.06em;
 }
 
 .group-card__actions {

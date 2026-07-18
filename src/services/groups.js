@@ -521,6 +521,41 @@ export async function getGroupWorkoutFeed(
   }));
 }
 
+export async function getRecentGroupActivity({ limit = 8 } = {}) {
+  const groups = await getUserGroups();
+
+  if (groups.length === 0) {
+    return [];
+  }
+
+  const perGroupLimit = Math.min(
+    Math.max(Number.parseInt(limit, 10) || 8, 1),
+    20
+  );
+
+  const feeds = await Promise.all(
+    groups.map(async (group) => {
+      const feedItems = await getGroupWorkoutFeed(group.groupId, {
+        limit: perGroupLimit,
+      });
+
+      return feedItems.map((item) => ({
+        ...item,
+        groupId: group.groupId,
+        groupName: group.name,
+      }));
+    })
+  );
+
+  return feeds
+    .flat()
+    .sort(
+      (first, second) =>
+        new Date(second.sharedAt) - new Date(first.sharedAt)
+    )
+    .slice(0, perGroupLimit);
+}
+
 /**
  * Shares one of the authenticated user's workout sessions with a group.
  *

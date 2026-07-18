@@ -1,11 +1,10 @@
 import PropTypes from "prop-types";
-import { Copy, Crown, ExternalLink, Users } from "lucide-react";
+import { Crown, ExternalLink, Users } from "lucide-react";
 
 import Badge from "../common/Badge";
-import Button from "../common/Button";
 import Card from "../common/Card";
 
-function GroupCard({ group, onOpen, onCopyInvite }) {
+function GroupCard({ group, onOpen }) {
   const isOwner = group.role === "owner";
 
   function handleKeyDown(event) {
@@ -53,32 +52,6 @@ function GroupCard({ group, onOpen, onCopyInvite }) {
         </div>
       </div>
 
-      {isOwner && group.inviteCode && (
-        <div className="group-card__invite">
-          <div>
-            <span className="group-card__invite-label">
-              Invite code
-            </span>
-
-            <strong className="group-card__invite-code">
-              {group.inviteCode}
-            </strong>
-          </div>
-
-          <Button
-            variant="secondary"
-            size="small"
-            onClick={(event) => {
-              event.stopPropagation();
-              onCopyInvite(group.inviteCode);
-            }}
-          >
-            <Copy size={16} aria-hidden="true" />
-            Copy
-          </Button>
-        </div>
-      )}
-
       <div className="group-card__actions">
         <span className="group-card__open">
           Open Group
@@ -93,11 +66,9 @@ GroupCard.propTypes = {
   group: PropTypes.shape({
     groupId: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
-    inviteCode: PropTypes.string,
     role: PropTypes.oneOf(["owner", "member"]).isRequired,
   }).isRequired,
   onOpen: PropTypes.func.isRequired,
-  onCopyInvite: PropTypes.func.isRequired,
 };
 
 export default GroupCard;
