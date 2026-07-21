@@ -6,6 +6,8 @@ import {
   Trash2,
 } from "lucide-react";
 import { useState } from "react";
+import { getExerciseGuide } from "../../data/exerciseLibrary";
+import ExerciseGuide from "./ExerciseGuide";
 
 function createSet(setNumber) {
   return {
@@ -27,6 +29,7 @@ function ExerciseCard({
   onSkip,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const guide = getExerciseGuide(exercise);
 
   const updateSet = (setId, field, value) => {
     onSetsChange(
@@ -82,6 +85,18 @@ function ExerciseCard({
             {exercise.sets} sets × {exercise.repRange} reps ·{" "}
             {exercise.restSeconds}s rest
           </p>
+
+          {guide && (
+            <p className="exercise-card__guide-summary">
+              {exercise.sets} sets • {guide.category} •{" "}
+              {[
+                ...guide.primaryMuscles,
+                ...guide.secondaryMuscles,
+              ]
+                .slice(0, 2)
+                .join(" • ")}
+            </p>
+          )}
         </div>
 
         <div className="exercise-card__header-actions">
@@ -163,6 +178,8 @@ function ExerciseCard({
               </div>
             </div>
           )}
+
+          <ExerciseGuide guide={guide} />
 
           <div
             className={`set-table ${
