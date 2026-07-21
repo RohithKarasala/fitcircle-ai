@@ -1299,6 +1299,65 @@ a {
   color: var(--muted);
 }
 
+.coach-coming-soon {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: 18px;
+  padding: 30px;
+  background:
+    radial-gradient(circle at top right, rgb(183 243 74 / 14%), transparent 42%),
+    var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+.coach-coming-soon__icon {
+  display: grid;
+  width: 64px;
+  height: 64px;
+  color: var(--primary);
+  background: #202a15;
+  border: 1px solid #33451f;
+  border-radius: 18px;
+  place-items: center;
+}
+
+.coach-coming-soon h2 {
+  margin: 0;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+  letter-spacing: -0.045em;
+}
+
+.coach-coming-soon p:last-child {
+  max-width: 720px;
+  margin: 10px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.coach-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.coach-preview-card {
+  min-height: 210px;
+}
+
+.coach-preview-card h3 {
+  margin: 22px 0 9px;
+  font-size: 1.08rem;
+}
+
+.coach-preview-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
 .sidebar-overlay {
   display: none;
 }
@@ -1348,6 +1407,15 @@ a {
 }
 
 @media (max-width: 720px) {
+  .coach-coming-soon {
+    grid-template-columns: 1fr;
+    padding: 24px;
+  }
+
+  .coach-preview-grid {
+    grid-template-columns: 1fr;
+  }
+
   .dashboard-grid {
     grid-template-columns: 1fr;
   }

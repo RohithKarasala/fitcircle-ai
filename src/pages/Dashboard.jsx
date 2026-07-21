@@ -493,25 +493,6 @@ function Dashboard() {
           </small>
         </article>
 
-        <article className="card card--wide">
-          <div className="card__header">
-            <div>
-              <span className="card__label">AI recommendation</span>
-              <h2>Keep today’s working weights steady</h2>
-            </div>
-          </div>
-
-          <p className="recommendation-copy">
-            Complete the prescribed repetitions with controlled technique.
-            Increase weight only after reaching the top of the rep range with
-            one or two repetitions still in reserve.
-          </p>
-
-          <Link className="text-link" to="/coach">
-            Open AI Coach
-            <ArrowRight size={16} />
-          </Link>
-        </article>
       </section>
     </div>
   );
