@@ -2157,6 +2157,58 @@ a {
   font-size: 0.84rem;
 }
 
+.exercise-card__resistance {
+  display: grid;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  background: #0e1115;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.exercise-card__resistance > div:first-child {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.exercise-card__resistance span {
+  color: var(--muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
+.exercise-card__resistance strong {
+  color: var(--primary);
+  font-size: 0.78rem;
+}
+
+.exercise-card__resistance-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.exercise-card__resistance-option {
+  min-height: 34px;
+  padding: 7px 11px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.exercise-card__resistance-option--active {
+  color: #101409;
+  background: var(--primary);
+  border-color: var(--primary);
+}
+
 .set-table {
   margin-bottom: 13px;
 }
@@ -2217,6 +2269,18 @@ a {
 
 .set-row input::placeholder {
   color: #555e6b;
+}
+
+.set-row__bodyweight {
+  display: grid;
+  min-height: 40px;
+  padding: 10px 11px;
+  color: var(--primary);
+  background: var(--surface-raised);
+  border: 1px solid #303741;
+  border-radius: 9px;
+  font-weight: 900;
+  place-items: center;
 }
 
 .set-row__delete {

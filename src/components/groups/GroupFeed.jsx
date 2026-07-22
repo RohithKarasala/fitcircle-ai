@@ -11,6 +11,10 @@ import Button from "../common/Button";
 import Card from "../common/Card";
 import { useGroupWorkoutFeed } from "../../hooks/useGroups";
 import { formatDate } from "../../utils/date";
+import {
+  formatSetPerformance,
+  getSessionExternalVolume,
+} from "../../utils/workoutMetrics";
 
 function getInitials(name = "") {
   return name
@@ -20,24 +24,6 @@ function getInitials(name = "") {
     .map((part) => part[0])
     .join("")
     .toUpperCase();
-}
-
-function getSessionVolume(exercises = []) {
-  return exercises.reduce(
-    (exerciseTotal, exercise) =>
-      exerciseTotal +
-      (exercise.sets ?? []).reduce((setTotal, set) => {
-        const weight = Number(set.weight);
-        const reps = Number(set.reps);
-
-        if (!Number.isFinite(weight) || !Number.isFinite(reps)) {
-          return setTotal;
-        }
-
-        return setTotal + weight * reps;
-      }, 0),
-    0,
-  );
 }
 
 function GroupFeed({ groupId }) {
@@ -115,7 +101,7 @@ function GroupFeed({ groupId }) {
         const displayName =
           item.displayName || "FitCircle Member";
         const exercises = item.exercises ?? [];
-        const volume = getSessionVolume(exercises);
+        const volume = getSessionExternalVolume(exercises);
         const initials = getInitials(displayName);
 
         return (
@@ -160,7 +146,7 @@ function GroupFeed({ groupId }) {
 
                 <Badge variant="neutral">
                   <TrendingUp size={13} aria-hidden="true" />
-                  {volume.toLocaleString()} lb volume
+                  {volume.toLocaleString()} lb external volume
                 </Badge>
               </div>
             </div>
@@ -173,9 +159,7 @@ function GroupFeed({ groupId }) {
                     {(exercise.sets ?? [])
                       .map(
                         (set) =>
-                          `${set.weight ?? "—"} lb x ${
-                            set.reps ?? "—"
-                          }`,
+                          formatSetPerformance(set),
                       )
                       .join(" | ")}
                   </span>

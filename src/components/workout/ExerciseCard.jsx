@@ -7,15 +7,24 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import { getExerciseGuide } from "../../data/exerciseLibrary";
+import {
+  formatSetPerformance,
+  getDefaultResistanceType,
+  getResistanceTypeLabel,
+  getWeightFieldLabel,
+  isBodyweightResistance,
+  resistanceTypes,
+} from "../../utils/workoutMetrics";
 import ExerciseGuide from "./ExerciseGuide";
 
-function createSet(setNumber) {
+function createSet(setNumber, resistanceType) {
   return {
     id: crypto.randomUUID(),
     setNumber,
     weight: "",
     reps: "",
     rir: "",
+    resistanceType,
   };
 }
 
@@ -30,6 +39,12 @@ function ExerciseCard({
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const guide = getExerciseGuide(exercise);
+  const resistanceType =
+    sets[0]?.resistanceType ??
+    getDefaultResistanceType(exercise);
+  const weightFieldLabel = getWeightFieldLabel(resistanceType);
+  const usesBodyweight =
+    isBodyweightResistance(resistanceType);
 
   const updateSet = (setId, field, value) => {
     onSetsChange(
@@ -44,8 +59,23 @@ function ExerciseCard({
     );
   };
 
+  const updateResistanceType = (value) => {
+    onSetsChange(
+      sets.map((set) => ({
+        ...set,
+        resistanceType: value,
+        weight: isBodyweightResistance(value)
+          ? ""
+          : set.weight,
+      })),
+    );
+  };
+
   const addSet = () => {
-    onSetsChange([...sets, createSet(sets.length + 1)]);
+    onSetsChange([
+      ...sets,
+      createSet(sets.length + 1, resistanceType),
+    ]);
   };
 
   const removeSet = (setId) => {
@@ -69,7 +99,7 @@ function ExerciseCard({
         <div>
           <div className="exercise-card__badges">
             <span className="exercise-card__equipment">
-              {exercise.equipment}
+              {getResistanceTypeLabel(resistanceType)}
             </span>
 
             {exercise.optional && (
@@ -169,10 +199,9 @@ function ExerciseCard({
               <div>
                 {previousSets.map((set) => (
                   <small key={set.setNumber}>
-                    {set.weight || "—"} lb × {set.reps || "—"}
-                    {showRir && set.rir !== ""
-                      ? ` · ${set.rir} RIR`
-                      : ""}
+                    {formatSetPerformance(set, {
+                      showRir,
+                    })}
                   </small>
                 ))}
               </div>
@@ -181,6 +210,35 @@ function ExerciseCard({
 
           <ExerciseGuide guide={guide} />
 
+          <div className="exercise-card__resistance">
+            <div>
+              <span>Resistance Type</span>
+              <strong>
+                {getResistanceTypeLabel(resistanceType)}
+              </strong>
+            </div>
+
+            <div className="exercise-card__resistance-options">
+              {resistanceTypes.map((type) => (
+                <button
+                  type="button"
+                  key={type.value}
+                  className={
+                    type.value === resistanceType
+                      ? "exercise-card__resistance-option exercise-card__resistance-option--active"
+                      : "exercise-card__resistance-option"
+                  }
+                  aria-pressed={type.value === resistanceType}
+                  onClick={() =>
+                    updateResistanceType(type.value)
+                  }
+                >
+                  {type.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div
             className={`set-table ${
               showRir ? "" : "set-table--no-rir"
@@ -188,7 +246,7 @@ function ExerciseCard({
           >
             <div className="set-table__header">
               <span>Set</span>
-              <span>Weight</span>
+              <span>{weightFieldLabel}</span>
               <span>Reps</span>
               {showRir && <span>RIR</span>}
               <span />
@@ -200,21 +258,30 @@ function ExerciseCard({
 
                 <label>
                   <span className="sr-only">
-                    Set {set.setNumber} weight
+                    Set {set.setNumber} {weightFieldLabel}
                   </span>
-                  <input
-                    type="number"
-                    min="0"
-                    step="2.5"
-                    inputMode="decimal"
-                    value={set.weight}
-                    placeholder={
-                      previousSets?.[set.setNumber - 1]?.weight ?? "0"
-                    }
-                    onChange={(event) =>
-                      updateSet(set.id, "weight", event.target.value)
-                    }
-                  />
+                  {usesBodyweight ? (
+                    <div className="set-row__bodyweight">BW</div>
+                  ) : (
+                    <input
+                      type="number"
+                      min="0"
+                      step="2.5"
+                      inputMode="decimal"
+                      value={set.weight}
+                      placeholder={
+                        previousSets?.[set.setNumber - 1]
+                          ?.weight ?? "0"
+                      }
+                      onChange={(event) =>
+                        updateSet(
+                          set.id,
+                          "weight",
+                          event.target.value,
+                        )
+                      }
+                    />
+                  )}
                 </label>
 
                 <label>

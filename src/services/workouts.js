@@ -1,4 +1,8 @@
 import { supabase } from "./supabase";
+import {
+  getDefaultResistanceType,
+  isBodyweightResistance,
+} from "../utils/workoutMetrics";
 
 function normalizeNullableNumber(value) {
   if (value === "" || value === null || value === undefined) {
@@ -31,6 +35,7 @@ function groupSetsBySession(sessions, sets) {
         set.rir === null || set.rir === undefined
           ? ""
           : String(set.rir),
+      resistanceType: set.resistance_type ?? null,
       exerciseId: set.exercise_id,
       exerciseName: set.exercise_name,
     });
@@ -55,6 +60,12 @@ function groupSetsBySession(sessions, sets) {
         weight: set.weight,
         reps: set.reps,
         rir: set.rir,
+        resistanceType:
+          set.resistanceType ??
+          getDefaultResistanceType({
+            id: set.exerciseId,
+            name: set.exerciseName,
+          }),
       });
 
       exerciseMap.set(set.exerciseId, existingExercise);
@@ -201,16 +212,25 @@ export async function saveWorkoutSession({
     );
   }
 
-  const setRows = completedSets.map(({ exercise, set }) => ({
-    session_id: session.id,
-    user_id: userId,
-    exercise_id: exercise.id,
-    exercise_name: exercise.name,
-    set_number: set.setNumber,
-    weight: normalizeNullableNumber(set.weight),
-    reps: normalizeNullableNumber(set.reps),
-    rir: normalizeNullableNumber(set.rir),
-  }));
+  const setRows = completedSets.map(({ exercise, set }) => {
+    const resistanceType =
+      set.resistanceType ??
+      getDefaultResistanceType(exercise);
+
+    return {
+      session_id: session.id,
+      user_id: userId,
+      exercise_id: exercise.id,
+      exercise_name: exercise.name,
+      set_number: set.setNumber,
+      weight: isBodyweightResistance(resistanceType)
+        ? 0
+        : normalizeNullableNumber(set.weight),
+      reps: normalizeNullableNumber(set.reps),
+      rir: normalizeNullableNumber(set.rir),
+      resistance_type: resistanceType,
+    };
+  });
 
   const { error: setsError } = await supabase
     .from("workout_sets")
@@ -289,7 +309,8 @@ export async function getUserWorkoutHistory({
         set_number,
         weight,
         reps,
-        rir
+        rir,
+        resistance_type
       `,
     )
     .eq("user_id", userId)

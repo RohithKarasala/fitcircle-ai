@@ -14,55 +14,38 @@ import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "../context/useAuth";
 import { getUserWorkoutHistory } from "../services/workouts";
 import { formatDate } from "../utils/date";
+import {
+  formatSetPerformance,
+  getCompletedSetCountFromExercises,
+  getSetExternalVolume,
+  getSessionExternalVolume,
+  isAssistedResistance,
+  isBodyweightResistance,
+  toWorkoutNumber,
+} from "../utils/workoutMetrics";
 
 const HISTORY_LIMIT = 100;
 
-function toNumber(value) {
-  const number = Number(value);
-
-  return Number.isFinite(number) ? number : 0;
-}
-
-function getSetVolume(set) {
-  return toNumber(set.weight) * toNumber(set.reps);
-}
-
 function getSessionVolume(session) {
-  return session.exercises.reduce(
-    (sessionTotal, exercise) =>
-      sessionTotal +
-      exercise.sets.reduce(
-        (exerciseTotal, set) =>
-          exerciseTotal + getSetVolume(set),
-        0,
-      ),
-    0,
-  );
+  return getSessionExternalVolume(session.exercises);
 }
 
 function getCompletedSetCount(session) {
-  return session.exercises.reduce(
-    (total, exercise) =>
-      total +
-      exercise.sets.filter(
-        (set) =>
-          toNumber(set.weight) > 0 || toNumber(set.reps) > 0,
-      ).length,
-    0,
-  );
+  return getCompletedSetCountFromExercises(session.exercises);
 }
 
 function getBestSet(session) {
   return session.exercises.reduce((bestSet, exercise) => {
     const exerciseBest = exercise.sets.reduce(
       (currentBest, set) => {
-        const volume = getSetVolume(set);
+        const volume = getSetExternalVolume(set);
 
         if (volume > currentBest.volume) {
           return {
             exerciseName: exercise.exerciseName,
-            weight: toNumber(set.weight),
-            reps: toNumber(set.reps),
+            label: formatSetPerformance(set),
+            weight: toWorkoutNumber(set.weight),
+            reps: toWorkoutNumber(set.reps),
             volume,
           };
         }
@@ -71,6 +54,7 @@ function getBestSet(session) {
       },
       {
         exerciseName: "",
+        label: "",
         weight: 0,
         reps: 0,
         volume: 0,
@@ -82,6 +66,7 @@ function getBestSet(session) {
       : bestSet;
   }, {
     exerciseName: "",
+    label: "",
     weight: 0,
     reps: 0,
     volume: 0,
@@ -180,6 +165,66 @@ function formatPercent(value) {
   return `${rounded}%`;
 }
 
+function getTrendMetricLabel(session) {
+  if (session.metricType === "reps") {
+    return "Reps";
+  }
+
+  if (session.metricType === "assistance") {
+    return "Best assistance";
+  }
+
+  return "External volume";
+}
+
+function getTrendMetricValue(session) {
+  if (session.metricType === "reps") {
+    return `${formatNumber(session.totalReps)} reps`;
+  }
+
+  if (session.metricType === "assistance") {
+    return session.bestAssistance > 0
+      ? `${formatNumber(session.bestAssistance)} lb`
+      : "—";
+  }
+
+  return `${formatNumber(session.volume)} lb`;
+}
+
+function getTrendChange(exercise) {
+  if (!exercise.previous) {
+    return {
+      value: "New",
+      isPositive: true,
+    };
+  }
+
+  if (exercise.latest.metricType === "reps") {
+    return {
+      value: `${exercise.repChange >= 0 ? "+" : ""}${formatNumber(
+        exercise.repChange,
+      )} reps`,
+      isPositive: exercise.repChange >= 0,
+    };
+  }
+
+  if (exercise.latest.metricType === "assistance") {
+    return {
+      value: `${
+        exercise.assistanceChange >= 0 ? "+" : ""
+      }${formatNumber(exercise.assistanceChange)} lb`,
+      isPositive: exercise.assistanceChange <= 0,
+    };
+  }
+
+  return {
+    value: `${exercise.volumeChange >= 0 ? "+" : ""}${formatNumber(
+      exercise.volumeChange,
+    )} lb`,
+    isPositive: exercise.volumeChange >= 0,
+  };
+}
+
 function getExerciseTrends(sessions) {
   const exerciseMap = new Map();
 
@@ -192,24 +237,54 @@ function getExerciseTrends(sessions) {
       };
 
       const volume = exercise.sets.reduce(
-        (total, set) => total + getSetVolume(set),
+        (total, set) => total + getSetExternalVolume(set),
+        0,
+      );
+      const totalReps = exercise.sets.reduce(
+        (total, set) => total + toWorkoutNumber(set.reps),
         0,
       );
       const bestWeight = exercise.sets.reduce(
-        (best, set) => Math.max(best, toNumber(set.weight)),
+        (best, set) =>
+          Math.max(best, toWorkoutNumber(set.weight)),
         0,
+      );
+      const bestAssistance = exercise.sets.reduce(
+        (best, set) =>
+          isAssistedResistance(set.resistanceType) &&
+          toWorkoutNumber(set.weight) > 0
+            ? Math.min(best, toWorkoutNumber(set.weight))
+            : best,
+        Number.POSITIVE_INFINITY,
+      );
+      const hasBodyweightSets = exercise.sets.some((set) =>
+        isBodyweightResistance(set.resistanceType),
+      );
+      const hasAssistedSets = exercise.sets.some((set) =>
+        isAssistedResistance(set.resistanceType),
       );
       const totalSets = exercise.sets.filter(
         (set) =>
-          toNumber(set.weight) > 0 || toNumber(set.reps) > 0,
+          toWorkoutNumber(set.weight) > 0 ||
+          toWorkoutNumber(set.reps) > 0,
       ).length;
 
-      if (volume > 0 || totalSets > 0) {
+      if (volume > 0 || totalReps > 0 || totalSets > 0) {
         existing.sessions.push({
           date: session.date,
           workoutName: session.workoutName,
           volume,
+          totalReps,
           bestWeight,
+          bestAssistance:
+            bestAssistance === Number.POSITIVE_INFINITY
+              ? 0
+              : bestAssistance,
+          metricType: hasBodyweightSets
+            ? "reps"
+            : hasAssistedSets
+              ? "assistance"
+              : "volume",
           totalSets,
         });
       }
@@ -237,12 +312,26 @@ function getExerciseTrends(sessions) {
           latest && previous
             ? latest.bestWeight - previous.bestWeight
             : 0,
+        repChange:
+          latest && previous
+            ? latest.totalReps - previous.totalReps
+            : 0,
+        assistanceChange:
+          latest && previous
+            ? latest.bestAssistance - previous.bestAssistance
+            : 0,
       };
     })
     .filter((exercise) => exercise.latest)
     .sort((first, second) => {
-      const firstScore = Math.abs(first.volumeChange);
-      const secondScore = Math.abs(second.volumeChange);
+      const firstScore =
+        first.latest.metricType === "reps"
+          ? Math.abs(first.repChange)
+          : Math.abs(first.volumeChange);
+      const secondScore =
+        second.latest.metricType === "reps"
+          ? Math.abs(second.repChange)
+          : Math.abs(second.volumeChange);
 
       return secondScore - firstScore;
     })
@@ -399,7 +488,8 @@ function Progress() {
           <h2>No workout data yet</h2>
           <p>
             Save a few workouts and this page will compare
-            your weekly volume, sets, and exercise trends.
+            your weekly external volume, sets, and exercise
+            trends.
           </p>
         </section>
       ) : null}
@@ -409,7 +499,7 @@ function Progress() {
           <section className="progress-summary-grid">
             <article className="progress-card progress-card--accent">
               <div className="progress-card__header">
-                <span>This week volume</span>
+                <span>This week external volume</span>
                 <BarChart3 size={20} />
               </div>
 
@@ -464,7 +554,7 @@ function Progress() {
 
               <strong>
                 {analytics.currentWeek.bestSet.volume > 0
-                  ? `${analytics.currentWeek.bestSet.weight} x ${analytics.currentWeek.bestSet.reps}`
+                  ? analytics.currentWeek.bestSet.label
                   : "Not yet"}
               </strong>
 
@@ -478,7 +568,7 @@ function Progress() {
           <section className="progress-panel">
             <div className="progress-panel__heading">
               <div>
-                <h2>This week vs last week</h2>
+                <h2>External volume this week vs last week</h2>
                 <p>
                   {getWeekRangeLabel(
                     analytics.currentWeekKey,
@@ -553,41 +643,45 @@ function Progress() {
                     </div>
 
                     <div>
-                      <span>Volume</span>
+                      <span>
+                        {getTrendMetricLabel(exercise.latest)}
+                      </span>
                       <strong>
-                        {formatNumber(exercise.latest.volume)}{" "}
-                        lb
+                        {getTrendMetricValue(exercise.latest)}
                       </strong>
                     </div>
 
                     <div>
                       <span>Change</span>
-                      <strong
-                        className={
-                          exercise.volumeChange >= 0
-                            ? "progress-text-positive"
-                            : "progress-text-negative"
-                        }
-                      >
-                        {exercise.previous
-                          ? `${
-                              exercise.volumeChange >= 0
-                                ? "+"
-                                : ""
-                            }${formatNumber(
-                              exercise.volumeChange,
-                            )} lb`
-                          : "New"}
-                      </strong>
+                      {(() => {
+                        const change = getTrendChange(exercise);
+
+                        return (
+                          <strong
+                            className={
+                              change.isPositive
+                                ? "progress-text-positive"
+                                : "progress-text-negative"
+                            }
+                          >
+                            {change.value}
+                          </strong>
+                        );
+                      })()}
                     </div>
 
                     <div>
-                      <span>Best weight</span>
+                      <span>
+                        {exercise.latest.metricType === "assistance"
+                          ? "Lower is better"
+                          : "Best weight"}
+                      </span>
                       <strong>
-                        {formatNumber(
-                          exercise.latest.bestWeight,
-                        )}{" "}
-                        lb
+                        {exercise.latest.metricType === "assistance"
+                          ? "Assisted"
+                          : `${formatNumber(
+                              exercise.latest.bestWeight,
+                            )} lb`}
                       </strong>
                     </div>
                   </article>
@@ -595,8 +689,8 @@ function Progress() {
               </div>
             ) : (
               <p className="progress-panel__empty">
-                Weighted exercise trends will appear after you
-                save strength workouts.
+                Exercise trends will appear after you save a few
+                workouts.
               </p>
             )}
           </section>
@@ -626,7 +720,7 @@ function Progress() {
                   <div>
                     <span>
                       {formatNumber(getSessionVolume(session))}{" "}
-                      lb volume
+                      lb external volume
                     </span>
                     <span>
                       {getCompletedSetCount(session)} sets

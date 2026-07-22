@@ -56,6 +56,29 @@ export const exerciseLibrary = {
     ],
     feel: ["Chest", "Some triceps", "Stable shoulders"],
   }),
+  "chest-press": guide({
+    name: "Chest Press",
+    category: "Chest",
+    primaryMuscles: ["Chest"],
+    secondaryMuscles: ["Triceps", "Front Delts"],
+    overview:
+      "A horizontal press for training the chest using the setup that fits your equipment and joints that day.",
+    steps: [
+      "Set up so the handles, bar, or dumbbells start around mid-chest height.",
+      "Keep your shoulder blades stable before you press.",
+      "Press forward or upward without shrugging.",
+      "Stop just short of aggressively locking your elbows.",
+      "Lower under control until your chest is comfortably stretched.",
+    ],
+    tips: ['Think "press through your chest" without letting your shoulders roll forward.'],
+    mistakes: [
+      "Letting shoulders roll forward",
+      "Bouncing out of the bottom",
+      "Shrugging at the top",
+      "Losing control of the weight path",
+    ],
+    feel: ["Chest", "Some triceps", "Stable shoulders"],
+  }),
   "incline-machine-press": guide({
     name: "Incline Machine Press",
     category: "Chest",
@@ -125,6 +148,29 @@ export const exerciseLibrary = {
     ],
     feel: ["Back of upper arms", "Light forearm tension"],
   }),
+  "triceps-pushdown": guide({
+    name: "Triceps Pushdown",
+    category: "Triceps",
+    primaryMuscles: ["Triceps"],
+    secondaryMuscles: ["Forearms"],
+    overview:
+      "A triceps isolation movement that trains elbow extension with steady tension.",
+    steps: [
+      "Set up so the handle, rope, or machine arm starts with your elbows bent.",
+      "Pin your elbows near your sides.",
+      "Push down by extending your elbows.",
+      "Squeeze your triceps at the bottom.",
+      "Return until your elbows bend without your upper arms drifting.",
+    ],
+    tips: ['Keep the upper arm quiet and let the elbow do the work.'],
+    mistakes: [
+      "Leaning your body into the movement",
+      "Letting elbows flare forward",
+      "Using momentum",
+      "Only doing the bottom half of the rep",
+    ],
+    feel: ["Back of upper arms", "Light forearm tension"],
+  }),
   "reverse-pushdown": guide({
     name: "Reverse Pushdown",
     category: "Triceps",
@@ -170,6 +216,29 @@ export const exerciseLibrary = {
       "Flaring wrists backward",
     ],
     feel: ["Shoulders", "Triceps", "Upper chest lightly"],
+  }),
+  "dumbbell-shoulder-press": guide({
+    name: "Dumbbell Shoulder Press",
+    category: "Shoulders",
+    primaryMuscles: ["Front Delts", "Side Delts"],
+    secondaryMuscles: ["Triceps", "Upper Chest", "Core"],
+    overview:
+      "A free-weight overhead press that builds shoulder strength while requiring more control than a machine press.",
+    steps: [
+      "Start with the dumbbells around shoulder height.",
+      "Brace your core and keep your ribs from flaring upward.",
+      "Press the dumbbells overhead in a controlled path.",
+      "Stop before aggressively locking your elbows.",
+      "Lower back to shoulder height with control.",
+    ],
+    tips: ['Think "press tall" while keeping your ribs stacked.'],
+    mistakes: [
+      "Overarching the lower back",
+      "Letting the dumbbells drift too far forward",
+      "Bouncing out of the bottom",
+      "Shrugging hard at the top",
+    ],
+    feel: ["Shoulders", "Triceps", "Core bracing"],
   }),
   "lateral-raise": guide({
     name: "Lateral Raise",
@@ -667,14 +736,14 @@ export const exerciseLibrary = {
 
 export const exerciseGuideAliases = {
   "machine-chest-press-monday": "machine-chest-press",
-  "machine-chest-press-thursday": "machine-chest-press",
+  "chest-press-thursday": "chest-press",
   "incline-machine-press": "incline-machine-press",
   "pec-deck-monday": "pec-deck",
   "rope-pushdown-monday": "rope-pushdown",
-  "rope-pushdown-thursday": "rope-pushdown",
+  "triceps-pushdown-thursday": "triceps-pushdown",
   "reverse-pushdown": "reverse-pushdown",
   "machine-shoulder-press-monday": "machine-shoulder-press",
-  "machine-shoulder-press-thursday": "machine-shoulder-press",
+  "dumbbell-shoulder-press-thursday": "dumbbell-shoulder-press",
   "lateral-raise-monday": "lateral-raise",
   "lateral-raise-thursday": "lateral-raise",
   "reverse-pec-deck-monday": "reverse-pec-deck",

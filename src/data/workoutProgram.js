@@ -254,14 +254,14 @@ export const workoutProgram = {
     estimatedMinutes: 70,
     exercises: [
       {
-        id: "machine-shoulder-press-thursday",
-        name: "Machine Shoulder Press",
-        equipment: "Machine",
+        id: "dumbbell-shoulder-press-thursday",
+        name: "Dumbbell Shoulder Press",
+        equipment: "Dumbbells",
         sets: 3,
         repRange: "8–12",
         restSeconds: 90,
         description:
-          "Keep your torso supported and press through a comfortable range without shrugging.",
+          "Press the dumbbells overhead with control, keeping your ribs down and avoiding a hard shrug at the top.",
       },
       {
         id: "lateral-raise-thursday",
@@ -294,24 +294,24 @@ export const workoutProgram = {
           "Raise your shoulders straight upward, pause briefly, and lower under control.",
       },
       {
-        id: "machine-chest-press-thursday",
-        name: "Machine Chest Press",
-        equipment: "Machine",
+        id: "chest-press-thursday",
+        name: "Chest Press",
+        equipment: "Dumbbells, barbell, smith machine, or machine",
         sets: 3,
         repRange: "8–12",
         restSeconds: 90,
         description:
-          "Keep your shoulder blades stable and press through a controlled range.",
+          "Press through a controlled range with stable shoulders, using the setup that feels best for today.",
       },
       {
-        id: "rope-pushdown-thursday",
-        name: "Rope Pushdown",
-        equipment: "Cable",
+        id: "triceps-pushdown-thursday",
+        name: "Triceps Pushdown",
+        equipment: "Cable, rope, or machine",
         sets: 3,
         repRange: "10–15",
         restSeconds: 60,
         description:
-          "Keep your elbows fixed and fully extend without leaning over the cable.",
+          "Keep your elbows fixed and fully extend without leaning your whole body into the movement.",
       },
       {
         id: "wrist-curl",

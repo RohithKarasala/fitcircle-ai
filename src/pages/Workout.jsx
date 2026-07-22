@@ -42,6 +42,10 @@ import {
   useGroups,
   useShareWorkout,
 } from "../hooks/useGroups";
+import {
+  formatSetPerformance,
+  getDefaultResistanceType,
+} from "../utils/workoutMetrics";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
 const DEFAULT_EXERCISE_FORM = {
@@ -53,7 +57,23 @@ const DEFAULT_EXERCISE_FORM = {
   description: "Log the sets you perform today.",
 };
 
+const renamedExerciseIds = {
+  "machine-shoulder-press-thursday":
+    "dumbbell-shoulder-press-thursday",
+  "machine-chest-press-thursday": "chest-press-thursday",
+  "rope-pushdown-thursday": "triceps-pushdown-thursday",
+};
+
+const previousExerciseIds = Object.fromEntries(
+  Object.entries(renamedExerciseIds).map(([previousId, nextId]) => [
+    nextId,
+    previousId,
+  ]),
+);
+
 function createExerciseSets(exercise) {
+  const resistanceType = getDefaultResistanceType(exercise);
+
   return Array.from(
     { length: exercise.sets },
     (_, index) => ({
@@ -62,6 +82,7 @@ function createExerciseSets(exercise) {
       weight: "",
       reps: "",
       rir: "",
+      resistanceType,
     }),
   );
 }
@@ -69,6 +90,8 @@ function createExerciseSets(exercise) {
 function resizeExerciseSets(currentSets, setCount) {
   const nextSetCount = Math.max(Number(setCount) || 1, 1);
   const existingSets = currentSets ?? [];
+  const resistanceType =
+    existingSets[0]?.resistanceType ?? getDefaultResistanceType({});
 
   return Array.from({ length: nextSetCount }, (_, index) => {
     const existingSet = existingSets[index];
@@ -84,6 +107,7 @@ function resizeExerciseSets(currentSets, setCount) {
           weight: "",
           reps: "",
           rir: "",
+          resistanceType,
         };
   });
 }
@@ -100,6 +124,7 @@ function createWorkoutState(workout) {
               weight: "",
               reps: "",
               rir: "",
+              resistanceType: getDefaultResistanceType(exercise),
               completed: false,
             },
           ]
@@ -132,14 +157,18 @@ function getDraftForKey(draftKey, workout) {
   }
 
   const hasMatchingExercises = exerciseIds.every(
-    (exerciseId) => Array.isArray(draft.workoutSets[exerciseId]),
+    (exerciseId) =>
+      Array.isArray(draft.workoutSets[exerciseId]) ||
+      Array.isArray(
+        draft.workoutSets[previousExerciseIds[exerciseId]],
+      ),
   );
 
   if (!hasMatchingExercises) {
     return createWorkoutState(workout);
   }
 
-  return draft.workoutSets;
+  return normalizeWorkoutSets(draft.workoutSets, workout);
 }
 
 function getLocalWorkoutForKey(draftKey, fallbackWorkout) {
@@ -147,7 +176,7 @@ function getLocalWorkoutForKey(draftKey, fallbackWorkout) {
   const draftWorkout = drafts[draftKey]?.workout;
 
   return draftWorkout?.exercises?.length
-    ? draftWorkout
+    ? migrateDraftWorkout(draftWorkout, fallbackWorkout)
     : fallbackWorkout;
 }
 
@@ -188,20 +217,60 @@ function getWorkoutStateFromDraft(draft, workout) {
   }
 
   const hasMatchingExercises = exerciseIds.every(
-    (exerciseId) => Array.isArray(workoutSets[exerciseId]),
+    (exerciseId) =>
+      Array.isArray(workoutSets[exerciseId]) ||
+      Array.isArray(workoutSets[previousExerciseIds[exerciseId]]),
   );
 
   return hasMatchingExercises
-    ? workoutSets
+    ? normalizeWorkoutSets(workoutSets, workout)
     : createWorkoutState(workout);
+}
+
+function normalizeWorkoutSets(workoutSets, workout) {
+  return Object.fromEntries(
+    workout.exercises.map((exercise) => [
+      exercise.id,
+      (
+        workoutSets[exercise.id] ??
+        workoutSets[previousExerciseIds[exercise.id]] ??
+        []
+      ).map((set) => ({
+        ...set,
+        resistanceType:
+          set.resistanceType ??
+          getDefaultResistanceType(exercise),
+      })),
+    ]),
+  );
 }
 
 function getWorkoutFromDraft(draft, fallbackWorkout) {
   const draftWorkout = draft?.workoutPayload?.workout;
 
   return draftWorkout?.exercises?.length
-    ? draftWorkout
+    ? migrateDraftWorkout(draftWorkout, fallbackWorkout)
     : fallbackWorkout;
+}
+
+function migrateDraftWorkout(draftWorkout, fallbackWorkout) {
+  const currentExercises = new Map(
+    fallbackWorkout.exercises.map((exercise) => [
+      exercise.id,
+      exercise,
+    ]),
+  );
+
+  return {
+    ...draftWorkout,
+    exercises: draftWorkout.exercises.map((exercise) => {
+      const nextExerciseId = renamedExerciseIds[exercise.id];
+
+      return nextExerciseId
+        ? currentExercises.get(nextExerciseId) ?? exercise
+        : exercise;
+    }),
+  };
 }
 
 function hasWorkoutEntries(workoutSets) {
@@ -994,6 +1063,7 @@ function Workout() {
             weight: "",
             reps: nextCompleted ? "1" : "",
             rir: "",
+            resistanceType: "bodyweight",
             completed: nextCompleted,
           },
         ],
@@ -1621,16 +1691,9 @@ function Workout() {
                             {exercise.sets
                               .map(
                                 (set) =>
-                                  `${
-                                    set.weight || "—"
-                                  } lb × ${
-                                    set.reps || "—"
-                                  }${
-                                    trackRir &&
-                                    set.rir !== ""
-                                      ? ` · ${set.rir} RIR`
-                                      : ""
-                                  }`,
+                                  formatSetPerformance(set, {
+                                    showRir: trackRir,
+                                  }),
                               )
                               .join(" | ")}
                           </span>
