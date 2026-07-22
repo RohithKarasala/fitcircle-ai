@@ -1933,6 +1933,53 @@ a {
   box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
 }
 
+.exercise-picker {
+  display: grid;
+  gap: 10px;
+  padding: 13px;
+  background: #0e1115;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+}
+
+.exercise-picker__list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.exercise-picker__option {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+  padding: 11px;
+  color: var(--text);
+  text-align: left;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  cursor: pointer;
+}
+
+.exercise-picker__option:hover {
+  border-color: #4b5d2f;
+}
+
+.exercise-picker__option strong {
+  overflow: hidden;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exercise-picker__option span {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .workout-modal__grid {
   display: grid;
   grid-template-columns: 0.7fr 1fr 0.8fr;
@@ -2347,6 +2394,10 @@ a {
   }
 
   .workout-modal__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .exercise-picker__list {
     grid-template-columns: 1fr;
   }
 

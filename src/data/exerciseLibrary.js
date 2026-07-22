@@ -171,6 +171,29 @@ export const exerciseLibrary = {
     ],
     feel: ["Back of upper arms", "Light forearm tension"],
   }),
+  "abdominal-crunch": guide({
+    name: "Abdominal Crunch",
+    category: "Core",
+    primaryMuscles: ["Abs"],
+    secondaryMuscles: ["Hip Flexors"],
+    overview:
+      "A trunk flexion movement that trains bringing the ribs toward the pelvis under control.",
+    steps: [
+      "Set up so your ribs can move toward your pelvis without your hips doing all the work.",
+      "Brace lightly before starting the rep.",
+      "Exhale and crunch by shortening your abs.",
+      "Pause briefly in the crunched position.",
+      "Return slowly without fully relaxing between reps.",
+    ],
+    tips: ["Think about curling your ribs down, not just pulling with your arms."],
+    mistakes: [
+      "Pulling mostly with the arms",
+      "Folding only at the hips",
+      "Using momentum",
+      "Letting tension disappear at the top",
+    ],
+    feel: ["Abs", "Deep core tension"],
+  }),
   "reverse-pushdown": guide({
     name: "Reverse Pushdown",
     category: "Triceps",
@@ -239,6 +262,52 @@ export const exerciseLibrary = {
       "Shrugging hard at the top",
     ],
     feel: ["Shoulders", "Triceps", "Core bracing"],
+  }),
+  "cable-face-pull": guide({
+    name: "Cable Face Pull",
+    category: "Shoulders",
+    primaryMuscles: ["Rear Delts", "Upper Back"],
+    secondaryMuscles: ["Rotator Cuff", "Mid Traps"],
+    overview:
+      "A cable pull that trains the rear delts and upper back while encouraging shoulder control.",
+    steps: [
+      "Set the cable around upper-chest to face height.",
+      "Hold the rope with thumbs pointing back or slightly upward.",
+      "Pull toward your face while keeping elbows high.",
+      "Pause with shoulder blades controlled.",
+      "Return slowly without letting the stack slam.",
+    ],
+    tips: ['Think "pull the rope apart" as it approaches your face.'],
+    mistakes: [
+      "Leaning back to move more weight",
+      "Pulling too low toward the chest",
+      "Shrugging hard",
+      "Rushing the return",
+    ],
+    feel: ["Rear delts", "Upper back", "Shoulder stabilizers"],
+  }),
+  "dumbbell-front-raise": guide({
+    name: "Dumbbell Front Raise",
+    category: "Shoulders",
+    primaryMuscles: ["Front Delts"],
+    secondaryMuscles: ["Upper Chest", "Core"],
+    overview:
+      "A shoulder isolation movement that raises the arms forward under control.",
+    steps: [
+      "Stand tall with dumbbells in front of your thighs.",
+      "Brace your core and keep your ribs down.",
+      "Raise the dumbbells forward to about shoulder height.",
+      "Pause briefly without shrugging.",
+      "Lower slowly back to the starting position.",
+    ],
+    tips: ["Use a lighter weight than you think and keep the rep smooth."],
+    mistakes: [
+      "Swinging the torso",
+      "Shrugging at the top",
+      "Raising far above shoulder height",
+      "Letting wrists flop backward",
+    ],
+    feel: ["Front shoulders", "Light upper chest"],
   }),
   "lateral-raise": guide({
     name: "Lateral Raise",

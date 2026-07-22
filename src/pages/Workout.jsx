@@ -20,6 +20,7 @@ import {
 } from "react";
 import ExerciseCard from "../components/workout/ExerciseCard";
 import { useAuth } from "../context/useAuth";
+import { exerciseCatalog } from "../data/exerciseCatalog";
 import {
   defaultWorkoutSchedule,
   getWeekdayKey,
@@ -55,6 +56,7 @@ const DEFAULT_EXERCISE_FORM = {
   repRange: "8-12",
   restSeconds: "60",
   description: "Log the sets you perform today.",
+  guideKey: "",
 };
 
 const renamedExerciseIds = {
@@ -387,6 +389,7 @@ function getExerciseFormFromExercise(exercise) {
     repRange: exercise.repRange,
     restSeconds: String(exercise.restSeconds),
     description: exercise.description,
+    guideKey: exercise.guideKey ?? "",
   };
 }
 
@@ -403,6 +406,7 @@ function normalizeExerciseForm(form) {
     sets: Math.max(Number(form.sets) || 1, 1),
     repRange: form.repRange.trim() || "8-12",
     restSeconds: Math.max(Number(form.restSeconds) || 0, 0),
+    guideKey: form.guideKey || undefined,
     description:
       form.description.trim() ||
       "Log the sets you perform today.",
@@ -417,6 +421,8 @@ function ExerciseEditorModal({
   onClose,
   onSubmit,
 }) {
+  const [catalogSearch, setCatalogSearch] = useState("");
+
   if (!mode) {
     return null;
   }
@@ -425,6 +431,24 @@ function ExerciseEditorModal({
     mode === "add" ? "Add exercise" : "Edit exercise";
   const actionLabel =
     mode === "add" ? "Add exercise" : "Save exercise";
+  const catalogMatches = exerciseCatalog
+    .filter((exercise) => {
+      const searchText = `${exercise.name} ${exercise.category} ${exercise.equipment}`
+        .toLowerCase();
+
+      return searchText.includes(catalogSearch.toLowerCase());
+    })
+    .slice(0, 6);
+
+  function selectCatalogExercise(exercise) {
+    onChange("name", exercise.name);
+    onChange("equipment", exercise.equipment);
+    onChange("sets", String(exercise.sets));
+    onChange("repRange", exercise.repRange);
+    onChange("restSeconds", String(exercise.restSeconds));
+    onChange("description", exercise.description);
+    onChange("guideKey", exercise.guideKey);
+  }
 
   return (
     <div className="workout-modal-backdrop">
@@ -454,6 +478,37 @@ function ExerciseEditorModal({
           className="workout-modal__form"
           onSubmit={onSubmit}
         >
+          {mode === "add" && (
+            <div className="exercise-picker">
+              <label>
+                <span>Choose from library</span>
+                <input
+                  value={catalogSearch}
+                  onChange={(event) =>
+                    setCatalogSearch(event.target.value)
+                  }
+                  placeholder="Search abs, shoulders, back..."
+                />
+              </label>
+
+              <div className="exercise-picker__list">
+                {catalogMatches.map((exercise) => (
+                  <button
+                    type="button"
+                    key={exercise.id}
+                    className="exercise-picker__option"
+                    onClick={() => selectCatalogExercise(exercise)}
+                  >
+                    <strong>{exercise.name}</strong>
+                    <span>
+                      {exercise.category} · {exercise.equipment}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <label>
             <span>Exercise name</span>
             <input
