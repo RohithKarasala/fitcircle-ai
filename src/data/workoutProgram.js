@@ -106,13 +106,13 @@ export const workoutProgram = {
       },
       {
         id: "wide-grip-pulldown-tuesday",
-        name: "Wide-Grip Lat Pulldown or Assisted Pull-Ups",
-        equipment: "Cable or assisted pull-up machine",
+        name: "Pull-Ups",
+        equipment: "Bodyweight or assisted pull-up machine",
         sets: 3,
         repRange: "8–12",
         restSeconds: 90,
         description:
-          "Use a controlled range and avoid leaning excessively backward. Choose the variation that feels best on your shoulders.",
+          "Use a controlled range, keep your shoulders down, and choose bodyweight or assisted resistance as needed.",
       },
       {
         id: "row-machine-tuesday",
@@ -354,13 +354,13 @@ export const workoutProgram = {
       },
       {
         id: "lat-pulldown-friday",
-        name: "Lat Pulldown or Assisted Pull-Ups",
-        equipment: "Cable or assisted pull-up machine",
+        name: "Pull-Ups",
+        equipment: "Bodyweight or assisted pull-up machine",
         sets: 3,
         repRange: "8–12",
         restSeconds: 90,
         description:
-          "Drive your elbows downward while keeping your torso controlled.",
+          "Drive your elbows downward while keeping your torso controlled. Use assistance if needed.",
       },
       {
         id: "row-machine-friday",
