@@ -46,6 +46,7 @@ import {
 import {
   formatSetPerformance,
   getDefaultResistanceType,
+  isWorkoutSetLogged,
 } from "../utils/workoutMetrics";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
@@ -278,13 +279,7 @@ function migrateDraftWorkout(draftWorkout, fallbackWorkout) {
 function hasWorkoutEntries(workoutSets) {
   return Object.values(workoutSets)
     .flat()
-    .some(
-      (set) =>
-        set.completed ||
-        set.weight !== "" ||
-        set.reps !== "" ||
-        set.rir !== "",
-    );
+    .some((set) => isWorkoutSetLogged(set) || set.rir !== "");
 }
 
 function getWeekStart(value = new Date()) {
@@ -953,11 +948,7 @@ function Workout() {
 
   const completedSets = Object.values(workoutSets)
     .flat()
-    .filter(
-      (set) =>
-        set.completed ||
-        (set.weight !== "" && set.reps !== ""),
-    ).length;
+    .filter(isWorkoutSetLogged).length;
 
   const totalSets =
     Object.values(workoutSets).flat().length;

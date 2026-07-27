@@ -2,6 +2,7 @@ import { supabase } from "./supabase";
 import {
   getDefaultResistanceType,
   isBodyweightResistance,
+  isWorkoutSetLogged,
 } from "../utils/workoutMetrics";
 
 function normalizeNullableNumber(value) {
@@ -176,9 +177,7 @@ export async function saveWorkoutSession({
 
   const completedSets = workout.exercises.flatMap((exercise) =>
     (workoutSets[exercise.id] ?? [])
-      .filter(
-        (set) => set.weight !== "" || set.reps !== "",
-      )
+      .filter(isWorkoutSetLogged)
       .map((set) => ({
         exercise,
         set,

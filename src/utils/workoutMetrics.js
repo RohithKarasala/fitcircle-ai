@@ -108,6 +108,21 @@ export function toWorkoutNumber(value) {
   return Number.isFinite(number) ? number : 0;
 }
 
+export function isWorkoutSetLogged(set = {}) {
+  if (set.completed) {
+    return true;
+  }
+
+  if (isBodyweightResistance(set.resistanceType)) {
+    return toWorkoutNumber(set.reps) > 0;
+  }
+
+  return (
+    toWorkoutNumber(set.weight) > 0 ||
+    toWorkoutNumber(set.reps) > 0
+  );
+}
+
 export function getSetExternalVolume(set = {}) {
   const resistanceType = normalizeResistanceType(
     set.resistanceType,
@@ -144,12 +159,7 @@ export function getCompletedSetCountFromExercises(
   return exercises.reduce(
     (total, exercise) =>
       total +
-      (exercise.sets ?? []).filter(
-        (set) =>
-          Boolean(set.completed) ||
-          toWorkoutNumber(set.weight) > 0 ||
-          toWorkoutNumber(set.reps) > 0,
-      ).length,
+      (exercise.sets ?? []).filter(isWorkoutSetLogged).length,
     0,
   );
 }
