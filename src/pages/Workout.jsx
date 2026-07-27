@@ -67,6 +67,15 @@ const renamedExerciseIds = {
   "rope-pushdown-thursday": "triceps-pushdown-thursday",
 };
 
+const refreshedExerciseNames = {
+  "wide-grip-pulldown-tuesday": [
+    "Wide-Grip Lat Pulldown or Assisted Pull-Ups",
+  ],
+  "lat-pulldown-friday": [
+    "Lat Pulldown or Assisted Pull-Ups",
+  ],
+};
+
 const previousExerciseIds = Object.fromEntries(
   Object.entries(renamedExerciseIds).map(([previousId, nextId]) => [
     nextId,
@@ -268,9 +277,15 @@ function migrateDraftWorkout(draftWorkout, fallbackWorkout) {
     ...draftWorkout,
     exercises: draftWorkout.exercises.map((exercise) => {
       const nextExerciseId = renamedExerciseIds[exercise.id];
+      const currentExercise = currentExercises.get(exercise.id);
+      const staleNames = refreshedExerciseNames[exercise.id] ?? [];
 
-      return nextExerciseId
-        ? currentExercises.get(nextExerciseId) ?? exercise
+      if (nextExerciseId) {
+        return currentExercises.get(nextExerciseId) ?? exercise;
+      }
+
+      return currentExercise && staleNames.includes(exercise.name)
+        ? currentExercise
         : exercise;
     }),
   };
