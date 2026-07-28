@@ -30,6 +30,25 @@ function createSet(setNumber, resistanceType, exerciseNote = "") {
   };
 }
 
+function getGuideSummaryParts(guide) {
+  const seenParts = new Set();
+
+  return [
+    guide.category,
+    ...guide.primaryMuscles,
+    ...guide.secondaryMuscles,
+  ].filter((part) => {
+    const normalizedPart = part?.trim().toLowerCase();
+
+    if (!normalizedPart || seenParts.has(normalizedPart)) {
+      return false;
+    }
+
+    seenParts.add(normalizedPart);
+    return true;
+  });
+}
+
 function ExerciseCard({
   exercise,
   sets,
@@ -40,10 +59,17 @@ function ExerciseCard({
   onSkip,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
+  const [isResistanceOpen, setIsResistanceOpen] =
+    useState(false);
   const guide = getExerciseGuide(exercise);
+  const guideSummaryParts = guide
+    ? getGuideSummaryParts(guide)
+    : [];
   const resistanceType =
     sets[0]?.resistanceType ??
     getDefaultResistanceType(exercise);
+  const resistanceTypeLabel =
+    getResistanceTypeLabel(resistanceType);
   const weightFieldLabel = getWeightFieldLabel(resistanceType);
   const usesBodyweight =
     isBodyweightResistance(resistanceType);
@@ -83,6 +109,7 @@ function ExerciseCard({
             : set.weight,
       })),
     );
+    setIsResistanceOpen(false);
   };
 
   const updateExerciseNote = (value) => {
@@ -122,7 +149,7 @@ function ExerciseCard({
         <div>
           <div className="exercise-card__badges">
             <span className="exercise-card__equipment">
-              {getResistanceTypeLabel(resistanceType)}
+              {resistanceTypeLabel}
             </span>
 
             {exercise.optional && (
@@ -142,12 +169,7 @@ function ExerciseCard({
           {guide && (
             <p className="exercise-card__guide-summary">
               {exercise.sets} sets • {guide.category} •{" "}
-              {[
-                ...guide.primaryMuscles,
-                ...guide.secondaryMuscles,
-              ]
-                .slice(0, 2)
-                .join(" • ")}
+              {guideSummaryParts.slice(1, 3).join(" • ")}
             </p>
           )}
         </div>
@@ -215,10 +237,16 @@ function ExerciseCard({
         <div className="exercise-card__body">
           <p className="exercise-description">{exercise.description}</p>
 
-          {matchingPreviousSets.length > 0 && (
-            <div className="previous-performance">
-              <span>Previous</span>
+          <div
+            className={
+              matchingPreviousSets.length > 0
+                ? "previous-performance"
+                : "previous-performance previous-performance--empty"
+            }
+          >
+            <span>Previous {resistanceTypeLabel}</span>
 
+            {matchingPreviousSets.length > 0 ? (
               <div>
                 {matchingPreviousSets.map((set) => (
                   <small key={set.setNumber}>
@@ -228,38 +256,59 @@ function ExerciseCard({
                   </small>
                 ))}
               </div>
-            </div>
-          )}
+            ) : (
+              <small>
+                No previous {resistanceTypeLabel.toLowerCase()}{" "}
+                sets yet
+              </small>
+            )}
+          </div>
 
           <ExerciseGuide guide={guide} />
 
           <div className="exercise-card__resistance">
-            <div>
+            <button
+              type="button"
+              className="exercise-card__resistance-summary"
+              aria-expanded={isResistanceOpen}
+              onClick={() =>
+                setIsResistanceOpen((current) => !current)
+              }
+            >
               <span>Resistance Type</span>
               <strong>
-                {getResistanceTypeLabel(resistanceType)}
+                {resistanceTypeLabel}
               </strong>
-            </div>
+              {isResistanceOpen ? (
+                <ChevronUp size={18} />
+              ) : (
+                <ChevronDown size={18} />
+              )}
+            </button>
 
-            <div className="exercise-card__resistance-options">
-              {resistanceTypes.map((type) => (
-                <button
-                  type="button"
-                  key={type.value}
-                  className={
-                    type.value === resistanceType
-                      ? "exercise-card__resistance-option exercise-card__resistance-option--active"
-                      : "exercise-card__resistance-option"
-                  }
-                  aria-pressed={type.value === resistanceType}
-                  onClick={() =>
-                    updateResistanceType(type.value)
-                  }
-                >
-                  {type.label}
-                </button>
-              ))}
-            </div>
+            {isResistanceOpen && (
+              <div className="exercise-card__resistance-options">
+                {resistanceTypes.map((type) => (
+                  <button
+                    type="button"
+                    key={type.value}
+                    className={
+                      type.value === resistanceType
+                        ? "exercise-card__resistance-option exercise-card__resistance-option--active"
+                        : "exercise-card__resistance-option"
+                    }
+                    aria-pressed={
+                      type.value === resistanceType
+                    }
+                    onClick={() =>
+                      updateResistanceType(type.value)
+                    }
+                  >
+                    {type.label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           <div
