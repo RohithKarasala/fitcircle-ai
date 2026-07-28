@@ -15,6 +15,10 @@
   --text: #f8fafc;
   --muted: #8d96a5;
   --primary: #b7f34a;
+  --primary-soft: #a3d957;
+  --primary-muted: #789260;
+  --primary-subtle: #607151;
+  --primary-wash: #1b2a14;
   --primary-dark: #93d128;
 }
 
@@ -314,7 +318,7 @@ a {
   display: grid;
   width: 30px;
   height: 30px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border-radius: 9px;
   place-items: center;
@@ -363,7 +367,7 @@ a {
 
 .eyebrow {
   margin: 0 0 9px;
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -420,7 +424,7 @@ a {
   display: grid;
   width: 44px;
   height: 44px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border-radius: 13px;
   place-items: center;
@@ -1603,7 +1607,7 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -1882,7 +1886,7 @@ a {
 
 .exercise-card__header .exercise-card__guide-summary {
   margin-top: 7px;
-  color: #92a769;
+  color: var(--primary-muted);
   font-size: 0.74rem;
   font-weight: 800;
 }
@@ -2054,7 +2058,7 @@ a {
 }
 
 .exercise-card__equipment {
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -2224,7 +2228,7 @@ a {
 
 .exercise-guide__block h4 {
   margin: 0;
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.72rem;
   font-weight: 900;
   letter-spacing: 0.1em;
@@ -2298,7 +2302,7 @@ a {
 }
 
 .exercise-card__resistance-summary strong {
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.82rem;
 }
 
@@ -2394,7 +2398,7 @@ a {
 }
 
 .set-row > strong {
-  color: var(--primary);
+  color: var(--primary-muted);
   text-align: center;
 }
 
@@ -2422,7 +2426,7 @@ a {
   display: grid;
   min-height: 40px;
   padding: 10px 11px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: var(--surface-raised);
   border: 1px solid #303741;
   border-radius: 9px;
@@ -2655,7 +2659,7 @@ a {
 
 .workout-history__exercises small,
 .group-feed-card__exercises small {
-  color: #91a06f;
+  color: var(--primary-muted);
   font-size: 0.76rem;
   font-weight: 700;
 }
@@ -2802,7 +2806,7 @@ a {
 }
 
 .recovery-card__content span {
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0.1em;
@@ -3275,7 +3279,7 @@ input:-webkit-autofill:focus {
   align-items: center;
   gap: 7px;
   margin-bottom: 9px;
-  color: var(--primary);
+  color: var(--primary-soft);
   font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.13em;
@@ -3374,7 +3378,7 @@ input:-webkit-autofill:focus {
   display: grid;
   width: 44px;
   height: 44px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border: 1px solid #33431f;
   border-radius: 13px;
@@ -3580,7 +3584,7 @@ input:-webkit-autofill:focus {
   display: grid;
   width: 58px;
   height: 58px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border: 1px solid #33431f;
   border-radius: 50%;
@@ -3728,7 +3732,7 @@ input:-webkit-autofill:focus {
   display: grid;
   width: 58px;
   height: 58px;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border: 1px solid #33431f;
   border-radius: 50%;
@@ -3769,7 +3773,7 @@ input:-webkit-autofill:focus {
   width: 42px;
   height: 42px;
   flex: 0 0 auto;
-  color: var(--primary);
+  color: var(--primary-soft);
   background: #202a15;
   border: 1px solid #33431f;
   border-radius: 50%;
