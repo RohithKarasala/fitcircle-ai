@@ -354,7 +354,7 @@ function ExerciseCard({
                       value={set.weight}
                       placeholder={
                         matchingPreviousSets[set.setNumber - 1]
-                          ?.weight ?? "0"
+                          ?.weight ?? ""
                       }
                       onChange={(event) =>
                         updateSet(
@@ -379,7 +379,7 @@ function ExerciseCard({
                     value={set.reps}
                     placeholder={
                       matchingPreviousSets[set.setNumber - 1]
-                        ?.reps ?? "0"
+                        ?.reps ?? ""
                     }
                     onChange={(event) =>
                       updateSet(set.id, "reps", event.target.value)
