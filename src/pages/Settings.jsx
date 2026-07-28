@@ -44,11 +44,13 @@ function createSettingsSnapshot({
   displayName,
   schedule,
   trackRir,
+  showExerciseGuides,
 }) {
   return JSON.stringify({
     displayName: displayName.trim(),
     schedule: normalizeWorkoutSchedule(schedule),
     trackRir: Boolean(trackRir),
+    showExerciseGuides: showExerciseGuides !== false,
   });
 }
 
@@ -76,6 +78,8 @@ function Settings() {
     defaultWorkoutSchedule,
   );
   const [trackRir, setTrackRir] = useState(false);
+  const [showExerciseGuides, setShowExerciseGuides] =
+    useState(true);
   const [isProfileLoading, setIsProfileLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -87,6 +91,7 @@ function Settings() {
         displayName: "",
         schedule: defaultWorkoutSchedule,
         trackRir: false,
+        showExerciseGuides: true,
       }),
     );
 
@@ -94,6 +99,7 @@ function Settings() {
     displayName,
     schedule,
     trackRir,
+    showExerciseGuides,
   });
 
   const hasUnsavedChanges =
@@ -107,11 +113,13 @@ function Settings() {
         setDisplayName("");
         setSchedule(defaultWorkoutSchedule);
         setTrackRir(false);
+        setShowExerciseGuides(true);
         setSavedSettingsSnapshot(
           createSettingsSnapshot({
             displayName: "",
             schedule: defaultWorkoutSchedule,
             trackRir: false,
+            showExerciseGuides: true,
           }),
         );
         return;
@@ -134,15 +142,19 @@ function Settings() {
             defaultWorkoutSchedule,
         );
         const nextTrackRir = Boolean(profile?.trackRir);
+        const nextShowExerciseGuides =
+          profile?.showExerciseGuides !== false;
 
         setDisplayName(nextDisplayName);
         setSchedule(nextSchedule);
         setTrackRir(nextTrackRir);
+        setShowExerciseGuides(nextShowExerciseGuides);
         setSavedSettingsSnapshot(
           createSettingsSnapshot({
             displayName: nextDisplayName,
             schedule: nextSchedule,
             trackRir: nextTrackRir,
+            showExerciseGuides: nextShowExerciseGuides,
           }),
         );
       } catch (error) {
@@ -176,16 +188,22 @@ function Settings() {
         displayName,
         workoutSchedule: schedule,
         trackRir,
+        showExerciseGuides,
       });
 
       setDisplayName(profile.displayName);
       setSchedule(profile.workoutSchedule);
       setTrackRir(Boolean(profile.trackRir));
+      setShowExerciseGuides(
+        profile.showExerciseGuides !== false,
+      );
       setSavedSettingsSnapshot(
         createSettingsSnapshot({
           displayName: profile.displayName,
           schedule: profile.workoutSchedule,
           trackRir: Boolean(profile.trackRir),
+          showExerciseGuides:
+            profile.showExerciseGuides !== false,
         }),
       );
       setNotice("Settings saved.");
@@ -312,6 +330,25 @@ function Settings() {
                 disabled={isProfileLoading}
                 onChange={(event) =>
                   setTrackRir(event.target.checked)
+                }
+              />
+            </label>
+
+            <label className="settings-page__toggle">
+              <span>
+                <strong>Show exercise guides</strong>
+                <small>
+                  Display technique, mistakes, and muscle
+                  guidance while logging workouts.
+                </small>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={showExerciseGuides}
+                disabled={isProfileLoading}
+                onChange={(event) =>
+                  setShowExerciseGuides(event.target.checked)
                 }
               />
             </label>

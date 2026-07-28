@@ -29,7 +29,7 @@ export async function getCurrentUserProfile(userId) {
   const { data, error } = await supabase
     .from("profiles")
     .select(
-      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir",
+      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir, show_exercise_guides",
     )
     .eq("id", userId)
     .maybeSingle();
@@ -50,6 +50,7 @@ export async function getCurrentUserProfile(userId) {
       data.workout_schedule,
     ),
     trackRir: Boolean(data.track_rir),
+    showExerciseGuides: data.show_exercise_guides !== false,
     currentWeightLb:
       data.current_weight_lb === null ||
       data.current_weight_lb === undefined
@@ -63,6 +64,7 @@ export async function updateProfileSettings({
   displayName,
   workoutSchedule,
   trackRir,
+  showExerciseGuides = true,
 }) {
   if (!user) {
     throw new Error("Sign in before updating settings.");
@@ -98,6 +100,7 @@ export async function updateProfileSettings({
         avatar_url: avatarUrl,
         workout_schedule: normalizedSchedule,
         track_rir: Boolean(trackRir),
+        show_exercise_guides: showExerciseGuides !== false,
         updated_at: new Date().toISOString(),
       },
       {
@@ -105,7 +108,7 @@ export async function updateProfileSettings({
       },
     )
     .select(
-      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir",
+      "id, display_name, avatar_url, current_weight_lb, workout_schedule, track_rir, show_exercise_guides",
     )
     .single();
 
@@ -121,6 +124,7 @@ export async function updateProfileSettings({
       data.workout_schedule,
     ),
     trackRir: Boolean(data.track_rir),
+    showExerciseGuides: data.show_exercise_guides !== false,
     currentWeightLb:
       data.current_weight_lb === null ||
       data.current_weight_lb === undefined

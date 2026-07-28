@@ -59,6 +59,7 @@ function ExerciseCard({
   sets,
   previousSets,
   showRir = false,
+  showGuide = true,
   onSetsChange,
   onEdit,
   onSkip,
@@ -312,7 +313,7 @@ function ExerciseCard({
             </div>
           )}
 
-          <ExerciseGuide guide={guide} />
+          {showGuide && <ExerciseGuide guide={guide} />}
 
           <div className="exercise-card__resistance">
             <button

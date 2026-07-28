@@ -707,6 +707,8 @@ function Workout() {
     useState("");
   const [shareGroupIds, setShareGroupIds] = useState({});
   const [trackRir, setTrackRir] = useState(false);
+  const [showExerciseGuides, setShowExerciseGuides] =
+    useState(true);
   const [activeExerciseId, setActiveExerciseId] =
     useState("");
   const [statusMessage, setStatusMessage] = useState("");
@@ -767,6 +769,7 @@ function Workout() {
     async function loadScheduledDay() {
       if (!user) {
         setTrackRir(false);
+        setShowExerciseGuides(true);
         setWorkoutSchedule(defaultWorkoutSchedule);
         return;
       }
@@ -796,6 +799,9 @@ function Workout() {
         );
 
         setTrackRir(Boolean(profile?.trackRir));
+        setShowExerciseGuides(
+          profile?.showExerciseGuides !== false,
+        );
         setWorkoutSchedule(schedule);
         setSelectedDate(todayDate);
         setSelectedDay(today);
@@ -809,6 +815,7 @@ function Workout() {
 
         if (isCurrent) {
           setTrackRir(false);
+          setShowExerciseGuides(true);
           appliedScheduleUserIdRef.current = user.id;
         }
       }
@@ -1450,6 +1457,7 @@ function Workout() {
             : previousExercise?.sets ?? []
         }
         showRir={trackRir}
+        showGuide={showExerciseGuides}
         onSetsChange={(sets) =>
           updateExerciseSets(exercise.id, sets)
         }
