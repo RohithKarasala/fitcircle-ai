@@ -1137,9 +1137,9 @@ function Workout() {
     });
   };
 
-  const resetWorkout = async () => {
+  const clearWorkoutDraft = async () => {
     const confirmed = window.confirm(
-      "Clear all entries from this workout?",
+      "Clear this workout draft? Saved workout history will not be deleted.",
     );
 
     if (!confirmed) {
@@ -1371,10 +1371,10 @@ function Workout() {
           <button
             type="button"
             className="secondary-button"
-            onClick={resetWorkout}
+            onClick={clearWorkoutDraft}
           >
             <RotateCcw size={17} />
-            Reset
+            Clear draft
           </button>
 
           <button
