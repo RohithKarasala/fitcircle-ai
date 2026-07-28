@@ -13,6 +13,7 @@ import {
   getResistanceTypeLabel,
   getWeightFieldLabel,
   isBodyweightResistance,
+  isWorkoutSetLogged,
   normalizeResistanceType,
   resistanceTypes,
 } from "../../utils/workoutMetrics";
@@ -76,6 +77,14 @@ function ExerciseCard({
   const usesBodyweight =
     isBodyweightResistance(resistanceType);
   const exerciseNote = sets[0]?.exerciseNote ?? "";
+  const loggedSetCount = sets.filter(isWorkoutSetLogged).length;
+  const nextSetNumber =
+    sets.find((set) => !isWorkoutSetLogged(set))?.setNumber ??
+    sets.length;
+  const stickyContextText =
+    loggedSetCount >= sets.length
+      ? `${loggedSetCount} of ${sets.length} sets logged`
+      : `Set ${nextSetNumber} of ${sets.length}`;
   const matchingPreviousSets = (previousSets ?? []).filter(
     (set) =>
       normalizeResistanceType(set.resistanceType) ===
@@ -341,6 +350,11 @@ function ExerciseCard({
               showRir ? "" : "set-table--no-rir"
             }`}
           >
+            <div className="exercise-card__sticky-context">
+              <strong>{exercise.name}</strong>
+              <span>{stickyContextText}</span>
+            </div>
+
             <label className="exercise-note">
               <span>Variation note</span>
               <input

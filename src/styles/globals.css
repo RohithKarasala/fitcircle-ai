@@ -2343,6 +2343,43 @@ a {
   margin-bottom: 13px;
 }
 
+.exercise-card__sticky-context {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: rgb(17 20 25 / 96%);
+  border: 1px solid var(--border);
+  border-radius: 11px;
+  box-shadow: 0 8px 20px rgb(0 0 0 / 18%);
+  backdrop-filter: blur(10px);
+}
+
+.exercise-card__sticky-context strong,
+.exercise-card__sticky-context span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.exercise-card__sticky-context strong {
+  min-width: 0;
+  color: var(--text);
+  font-size: 0.82rem;
+}
+
+.exercise-card__sticky-context span {
+  flex: 0 0 auto;
+  color: var(--primary-soft);
+  font-size: 0.74rem;
+  font-weight: 800;
+}
+
 .exercise-note {
   display: grid;
   gap: 7px;
@@ -4118,6 +4155,14 @@ input:-webkit-autofill:focus {
   .workout-active-exercise {
     min-width: 0;
     max-width: 820px;
+  }
+
+  .workout-active-exercise .exercise-card {
+    overflow: visible;
+  }
+
+  .workout-active-exercise .exercise-card__sticky-context {
+    top: 12px;
   }
 
   .workout-active-exercise .set-table__header,
