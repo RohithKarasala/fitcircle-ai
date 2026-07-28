@@ -2422,14 +2422,14 @@ a {
   grid-template-columns: 54px minmax(90px, 1fr) minmax(80px, 1fr) minmax(
       70px,
       0.7fr
-    ) 38px;
+    ) 48px;
   gap: 10px;
   align-items: center;
 }
 
 .set-table--no-rir .set-table__header,
 .set-table--no-rir .set-row {
-  grid-template-columns: 54px minmax(90px, 1fr) minmax(80px, 1fr) 38px;
+  grid-template-columns: 54px minmax(90px, 1fr) minmax(80px, 1fr) 48px;
 }
 
 .set-table__header {
@@ -2493,12 +2493,12 @@ a {
 
 .set-row__delete {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 42px;
+  height: 42px;
   color: #77808c;
   background: transparent;
   border: 0;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   place-items: center;
 }
@@ -2588,20 +2588,20 @@ a {
   }
 
   .set-table__header {
-    grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 30px;
+    grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 42px;
     gap: 6px;
     padding: 0 8px 7px;
     font-size: 0.62rem;
   }
 
   .set-row {
-    grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 30px;
+    grid-template-columns: 32px repeat(3, minmax(0, 1fr)) 42px;
     gap: 6px;
   }
 
   .set-table--no-rir .set-table__header,
   .set-table--no-rir .set-row {
-    grid-template-columns: 32px repeat(2, minmax(0, 1fr)) 30px;
+    grid-template-columns: 32px repeat(2, minmax(0, 1fr)) 42px;
   }
 
   .set-row input {
@@ -4167,7 +4167,7 @@ input:-webkit-autofill:focus {
 
   .workout-active-exercise .set-table__header,
   .workout-active-exercise .set-row {
-    grid-template-columns: 54px 128px 128px minmax(70px, 96px) 38px;
+    grid-template-columns: 54px 128px 128px minmax(70px, 96px) 48px;
     justify-content: start;
   }
 
@@ -4175,7 +4175,7 @@ input:-webkit-autofill:focus {
     .set-table--no-rir
     .set-table__header,
   .workout-active-exercise .set-table--no-rir .set-row {
-    grid-template-columns: 54px 128px 128px 38px;
+    grid-template-columns: 54px 128px 128px 48px;
   }
 
   .workout-active-exercise .set-row input {

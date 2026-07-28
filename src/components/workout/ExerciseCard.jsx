@@ -31,6 +31,10 @@ function createSet(setNumber, resistanceType, exerciseNote = "") {
   };
 }
 
+function hasSetEnteredValues(set = {}) {
+  return isWorkoutSetLogged(set) || set.rir !== "";
+}
+
 function getGuideSummaryParts(guide) {
   const seenParts = new Set();
 
@@ -157,6 +161,17 @@ function ExerciseCard({
 
   const removeSet = (setId) => {
     if (readOnly) {
+      return;
+    }
+
+    const targetSet = sets.find((set) => set.id === setId);
+
+    if (
+      hasSetEnteredValues(targetSet) &&
+      !window.confirm(
+        `Remove set ${targetSet.setNumber}? Logged values for this set will be deleted.`,
+      )
+    ) {
       return;
     }
 
