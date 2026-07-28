@@ -125,7 +125,6 @@ function Dashboard() {
   const [workoutSchedule, setWorkoutSchedule] = useState(
     defaultWorkoutSchedule,
   );
-  const [trackRir, setTrackRir] = useState(false);
   const [isTodayWorkoutFinished, setIsTodayWorkoutFinished] =
     useState(false);
   const [completedWorkoutDates, setCompletedWorkoutDates] =
@@ -155,6 +154,10 @@ function Dashboard() {
   const todayKey = getTodayKey();
   const todayWorkoutKey = getTodayWorkoutKey(workoutSchedule);
   const todayWorkout = workoutProgram[todayWorkoutKey];
+  const todayWorkoutSetCount = todayWorkout.exercises.reduce(
+    (total, exercise) => total + exercise.sets,
+    0,
+  );
   const completedThisWeek = completedWorkoutDates.size;
   const weeklyWorkoutTarget = 5;
   const remainingWorkoutsThisWeek = Math.max(
@@ -175,7 +178,6 @@ function Dashboard() {
         setWeightInput("");
         setProfileDisplayName("");
         setWorkoutSchedule(defaultWorkoutSchedule);
-        setTrackRir(false);
         setIsTodayWorkoutFinished(false);
         setCompletedWorkoutDates(new Set());
         setNutritionTotals({
@@ -221,7 +223,6 @@ function Dashboard() {
               defaultWorkoutSchedule,
           ),
         );
-        setTrackRir(Boolean(profile?.trackRir));
         setIsTodayWorkoutFinished(todaySessions.length > 0);
         setCompletedWorkoutDates(
           getCompletedWorkoutDatesThisWeek(weekSessions),
@@ -327,16 +328,8 @@ function Dashboard() {
             </div>
 
             <div>
-              <span>Target effort</span>
-              <strong>
-                {isTodayWorkoutFinished
-                  ? "Completed"
-                  : isRecoveryWorkout
-                  ? "Easy pace"
-                  : trackRir
-                    ? "1–2 RIR"
-                    : "Controlled"}
-              </strong>
+              <span>Total sets</span>
+              <strong>{todayWorkoutSetCount}</strong>
             </div>
           </div>
 
