@@ -17,6 +17,7 @@ import {
   weekDayLabels,
   weekDays,
   workoutProgram,
+  workoutSchedulePresets,
 } from "../data/workoutProgram";
 import {
   getCurrentUserProfile,
@@ -49,6 +50,23 @@ function createSettingsSnapshot({
     schedule: normalizeWorkoutSchedule(schedule),
     trackRir: Boolean(trackRir),
   });
+}
+
+function areSchedulesEqual(firstSchedule, secondSchedule) {
+  const first = normalizeWorkoutSchedule(firstSchedule);
+  const second = normalizeWorkoutSchedule(secondSchedule);
+
+  return weekDays.every((day) => first[day] === second[day]);
+}
+
+function getActivePresetId(schedule) {
+  const matchedPreset = workoutSchedulePresets.find(
+    (preset) =>
+      preset.schedule &&
+      areSchedulesEqual(schedule, preset.schedule),
+  );
+
+  return matchedPreset?.id ?? "custom";
 }
 
 function Settings() {
@@ -194,7 +212,20 @@ function Settings() {
         [day]: workoutKey,
       }),
     );
+    setNotice("");
   }
+
+  function applySchedulePreset(preset) {
+    setNotice("");
+
+    if (!preset.schedule) {
+      return;
+    }
+
+    setSchedule(normalizeWorkoutSchedule(preset.schedule));
+  }
+
+  const activePresetId = getActivePresetId(schedule);
 
   return (
     <div className="page settings-page">
@@ -290,9 +321,29 @@ function Settings() {
             <div className="settings-page__card-heading">
               <h2>Workout schedule</h2>
               <p>
-                Choose which workout should appear for each
-                day on your dashboard.
+                Start with a plan or choose which workout
+                should appear for each day.
               </p>
+            </div>
+
+            <div className="settings-page__presets">
+              {workoutSchedulePresets.map((preset) => (
+                <button
+                  type="button"
+                  aria-pressed={activePresetId === preset.id}
+                  className={
+                    activePresetId === preset.id
+                      ? "settings-page__preset settings-page__preset--active"
+                      : "settings-page__preset"
+                  }
+                  key={preset.id}
+                  disabled={isProfileLoading}
+                  onClick={() => applySchedulePreset(preset)}
+                >
+                  <strong>{preset.name}</strong>
+                  <span>{preset.description}</span>
+                </button>
+              ))}
             </div>
 
             <div className="settings-page__schedule">

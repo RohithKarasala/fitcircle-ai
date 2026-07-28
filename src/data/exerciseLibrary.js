@@ -822,6 +822,7 @@ export const exerciseGuideAliases = {
   "lat-pulldown-friday": "assisted-pull-up",
   "row-machine-tuesday": "row-machine",
   "row-machine-friday": "row-machine",
+  "abdominal-crunch": "abdominal-crunch",
   "back-extension": "back-extension",
   "preacher-curl-tuesday": "preacher-curl",
   "preacher-curl-friday": "preacher-curl",
