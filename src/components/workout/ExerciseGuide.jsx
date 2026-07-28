@@ -2,6 +2,30 @@ import { ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import ExerciseGuideTabs from "./ExerciseGuideTabs";
 
+function getGuideSubtitle(guide) {
+  const seenMuscles = new Set();
+
+  return [
+    ...guide.primaryMuscles,
+    ...guide.secondaryMuscles,
+  ]
+    .filter((muscle) => {
+      const normalizedMuscle = muscle?.trim().toLowerCase();
+
+      if (
+        !normalizedMuscle ||
+        seenMuscles.has(normalizedMuscle)
+      ) {
+        return false;
+      }
+
+      seenMuscles.add(normalizedMuscle);
+      return true;
+    })
+    .slice(0, 3)
+    .join(", ");
+}
+
 function ExerciseGuide({ guide }) {
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("technique");
@@ -9,6 +33,8 @@ function ExerciseGuide({ guide }) {
   if (!guide) {
     return null;
   }
+
+  const guideSubtitle = getGuideSubtitle(guide);
 
   return (
     <section className="exercise-guide">
@@ -20,10 +46,7 @@ function ExerciseGuide({ guide }) {
       >
         <span>
           <strong>Guide</strong>
-          <small>
-            {guide.category} ·{" "}
-            {guide.primaryMuscles.slice(0, 2).join(", ")}
-          </small>
+          <small>{guideSubtitle}</small>
         </span>
 
         {isOpen ? (

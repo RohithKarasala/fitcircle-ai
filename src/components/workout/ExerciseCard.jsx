@@ -244,7 +244,7 @@ function ExerciseCard({
                 : "previous-performance previous-performance--empty"
             }
           >
-            <span>Previous {resistanceTypeLabel}</span>
+            <span>Previous: {resistanceTypeLabel}</span>
 
             {matchingPreviousSets.length > 0 ? (
               <div>
