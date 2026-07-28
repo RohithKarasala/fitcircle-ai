@@ -5,7 +5,7 @@ import {
   Plus,
   Trash2,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { getExerciseGuide } from "../../data/exerciseLibrary";
 import {
   formatSetPerformance,
@@ -13,6 +13,7 @@ import {
   getResistanceTypeLabel,
   getWeightFieldLabel,
   isBodyweightResistance,
+  isWorkoutSetComplete,
   isWorkoutSetLogged,
   normalizeResistanceType,
   resistanceTypes,
@@ -60,6 +61,7 @@ function ExerciseCard({
   previousSets,
   showRir = false,
   showGuide = true,
+  autoCollapseOnComplete = false,
   onSetsChange,
   onEdit,
   onSkip,
@@ -82,9 +84,12 @@ function ExerciseCard({
   const usesBodyweight =
     isBodyweightResistance(resistanceType);
   const exerciseNote = sets[0]?.exerciseNote ?? "";
-  const loggedSetCount = sets.filter(isWorkoutSetLogged).length;
+  const loggedSetCount = sets.filter(isWorkoutSetComplete).length;
+  const isComplete =
+    sets.length > 0 && loggedSetCount >= sets.length;
+  const wasCompleteRef = useRef(isComplete);
   const nextSetNumber =
-    sets.find((set) => !isWorkoutSetLogged(set))?.setNumber ??
+    sets.find((set) => !isWorkoutSetComplete(set))?.setNumber ??
     sets.length;
   const stickyContextText =
     loggedSetCount >= sets.length
@@ -95,6 +100,18 @@ function ExerciseCard({
       normalizeResistanceType(set.resistanceType) ===
       normalizeResistanceType(resistanceType),
   );
+
+  useEffect(() => {
+    if (
+      autoCollapseOnComplete &&
+      isComplete &&
+      !wasCompleteRef.current
+    ) {
+      setIsExpanded(false);
+    }
+
+    wasCompleteRef.current = isComplete;
+  }, [autoCollapseOnComplete, isComplete]);
 
   const updateSet = (setId, field, value) => {
     if (readOnly) {

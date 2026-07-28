@@ -47,6 +47,7 @@ import {
 import {
   formatSetPerformance,
   getDefaultResistanceType,
+  isWorkoutSetComplete,
   isWorkoutSetLogged,
 } from "../utils/workoutMetrics";
 
@@ -98,6 +99,12 @@ function createExerciseSets(exercise) {
       resistanceType,
       exerciseNote: "",
     }),
+  );
+}
+
+function areExerciseSetsComplete(sets = []) {
+  return (
+    sets.length > 0 && sets.every((set) => isWorkoutSetComplete(set))
   );
 }
 
@@ -1009,7 +1016,7 @@ function Workout() {
 
   const completedSets = Object.values(displayWorkoutSets)
     .flat()
-    .filter(isWorkoutSetLogged).length;
+    .filter(isWorkoutSetComplete).length;
 
   const totalSets =
     Object.values(displayWorkoutSets).flat().length;
@@ -1038,10 +1045,38 @@ function Workout() {
   };
 
   const updateExerciseSets = (exerciseId, sets) => {
-    setWorkoutSets((current) => ({
-      ...current,
+    const wasComplete = areExerciseSetsComplete(
+      workoutSets[exerciseId],
+    );
+    const isComplete = areExerciseSetsComplete(sets);
+    const nextWorkoutSets = {
+      ...workoutSets,
       [exerciseId]: sets,
-    }));
+    };
+
+    setWorkoutSets(nextWorkoutSets);
+
+    if (!wasComplete && isComplete) {
+      const currentExerciseIndex =
+        workout.exercises.findIndex(
+          (exercise) => exercise.id === exerciseId,
+        );
+      const orderedExercises = [
+        ...workout.exercises.slice(currentExerciseIndex + 1),
+        ...workout.exercises.slice(0, currentExerciseIndex),
+      ];
+      const nextExercise = orderedExercises.find((exercise) => {
+        const nextSets =
+          nextWorkoutSets[exercise.id] ??
+          createExerciseSets(exercise);
+
+        return !areExerciseSetsComplete(nextSets);
+      });
+
+      if (nextExercise) {
+        setActiveExerciseId(nextExercise.id);
+      }
+    }
   };
 
   const closeExerciseEditor = () => {
@@ -1393,17 +1428,10 @@ function Workout() {
     error: "Draft save failed",
   }[draftSaveStatus];
 
-  const getExerciseLoggedSetCount = (exercise) =>
-    (displayWorkoutSets[exercise.id] ?? []).filter(isWorkoutSetLogged)
-      .length;
-
   const isExerciseComplete = (exercise) => {
     const sets = displayWorkoutSets[exercise.id] ?? [];
 
-    return (
-      sets.length > 0 &&
-      getExerciseLoggedSetCount(exercise) >= sets.length
-    );
+    return areExerciseSetsComplete(sets);
   };
 
   const getExerciseNavMeta = (exercise) => {
@@ -1434,7 +1462,10 @@ function Workout() {
     return `${setCount} sets • ${guideParts}`;
   };
 
-  const renderExerciseLogger = (exercise) => {
+  const renderExerciseLogger = (
+    exercise,
+    { autoCollapseOnComplete = false } = {},
+  ) => {
     const previousExercise =
       previousWorkout?.exercises.find(
         (item) => item.exerciseId === exercise.id,
@@ -1458,6 +1489,7 @@ function Workout() {
         }
         showRir={trackRir}
         showGuide={showExerciseGuides}
+        autoCollapseOnComplete={autoCollapseOnComplete}
         onSetsChange={(sets) =>
           updateExerciseSets(exercise.id, sets)
         }
@@ -1796,7 +1828,9 @@ function Workout() {
             );
           }
 
-          return renderExerciseLogger(exercise);
+          return renderExerciseLogger(exercise, {
+            autoCollapseOnComplete: true,
+          });
         })}
 
         {!isCompletionWorkout && !selectedDayFinished && (
