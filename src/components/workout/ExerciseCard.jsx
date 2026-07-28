@@ -57,6 +57,8 @@ function ExerciseCard({
   onSetsChange,
   onEdit,
   onSkip,
+  readOnly = false,
+  hidePrevious = false,
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isResistanceOpen, setIsResistanceOpen] =
@@ -81,6 +83,10 @@ function ExerciseCard({
   );
 
   const updateSet = (setId, field, value) => {
+    if (readOnly) {
+      return;
+    }
+
     onSetsChange(
       sets.map((set) =>
         set.id === setId
@@ -94,6 +100,10 @@ function ExerciseCard({
   };
 
   const updateResistanceType = (value) => {
+    if (readOnly) {
+      return;
+    }
+
     const isSameResistanceType =
       normalizeResistanceType(value) ===
       normalizeResistanceType(resistanceType);
@@ -113,6 +123,10 @@ function ExerciseCard({
   };
 
   const updateExerciseNote = (value) => {
+    if (readOnly) {
+      return;
+    }
+
     onSetsChange(
       sets.map((set) => ({
         ...set,
@@ -122,6 +136,10 @@ function ExerciseCard({
   };
 
   const addSet = () => {
+    if (readOnly) {
+      return;
+    }
+
     onSetsChange([
       ...sets,
       createSet(sets.length + 1, resistanceType, exerciseNote),
@@ -129,6 +147,10 @@ function ExerciseCard({
   };
 
   const removeSet = (setId) => {
+    if (readOnly) {
+      return;
+    }
+
     const updatedSets = sets
       .filter((set) => set.id !== setId)
       .map((set, index) => ({
@@ -175,7 +197,7 @@ function ExerciseCard({
         </div>
 
         <div className="exercise-card__header-actions">
-          {onEdit && (
+          {onEdit && !readOnly && (
             <span
               className="exercise-card__icon-action"
               role="button"
@@ -200,7 +222,7 @@ function ExerciseCard({
             </span>
           )}
 
-          {onSkip && (
+          {onSkip && !readOnly && (
             <span
               className="exercise-card__icon-action exercise-card__icon-action--danger"
               role="button"
@@ -237,32 +259,34 @@ function ExerciseCard({
         <div className="exercise-card__body">
           <p className="exercise-description">{exercise.description}</p>
 
-          <div
-            className={
-              matchingPreviousSets.length > 0
-                ? "previous-performance"
-                : "previous-performance previous-performance--empty"
-            }
-          >
-            <span>Previous: {resistanceTypeLabel}</span>
+          {!hidePrevious && (
+            <div
+              className={
+                matchingPreviousSets.length > 0
+                  ? "previous-performance"
+                  : "previous-performance previous-performance--empty"
+              }
+            >
+              <span>Previous: {resistanceTypeLabel}</span>
 
-            {matchingPreviousSets.length > 0 ? (
-              <div>
-                {matchingPreviousSets.map((set) => (
-                  <small key={set.setNumber}>
-                    {formatSetPerformance(set, {
-                      showRir,
-                    })}
-                  </small>
-                ))}
-              </div>
-            ) : (
-              <small>
-                No previous {resistanceTypeLabel.toLowerCase()}{" "}
-                sets yet
-              </small>
-            )}
-          </div>
+              {matchingPreviousSets.length > 0 ? (
+                <div>
+                  {matchingPreviousSets.map((set) => (
+                    <small key={set.setNumber}>
+                      {formatSetPerformance(set, {
+                        showRir,
+                      })}
+                    </small>
+                  ))}
+                </div>
+              ) : (
+                <small>
+                  No previous {resistanceTypeLabel.toLowerCase()}{" "}
+                  sets yet
+                </small>
+              )}
+            </div>
+          )}
 
           <ExerciseGuide guide={guide} />
 
@@ -271,6 +295,7 @@ function ExerciseCard({
               type="button"
               className="exercise-card__resistance-summary"
               aria-expanded={isResistanceOpen}
+              disabled={readOnly}
               onClick={() =>
                 setIsResistanceOpen((current) => !current)
               }
@@ -286,7 +311,7 @@ function ExerciseCard({
               )}
             </button>
 
-            {isResistanceOpen && (
+            {isResistanceOpen && !readOnly && (
               <div className="exercise-card__resistance-options">
                 {resistanceTypes.map((type) => (
                   <button
@@ -320,6 +345,7 @@ function ExerciseCard({
               <span>Variation note</span>
               <input
                 value={exerciseNote}
+                disabled={readOnly}
                 onChange={(event) =>
                   updateExerciseNote(event.target.value)
                 }
@@ -352,6 +378,7 @@ function ExerciseCard({
                       step="2.5"
                       inputMode="decimal"
                       value={set.weight}
+                      disabled={readOnly}
                       placeholder={
                         matchingPreviousSets[set.setNumber - 1]
                           ?.weight ?? ""
@@ -377,6 +404,7 @@ function ExerciseCard({
                     step="1"
                     inputMode="numeric"
                     value={set.reps}
+                    disabled={readOnly}
                     placeholder={
                       matchingPreviousSets[set.setNumber - 1]
                         ?.reps ?? ""
@@ -399,6 +427,7 @@ function ExerciseCard({
                       step="1"
                       inputMode="numeric"
                       value={set.rir}
+                      disabled={readOnly}
                       placeholder="2"
                       onChange={(event) =>
                         updateSet(set.id, "rir", event.target.value)
@@ -407,27 +436,33 @@ function ExerciseCard({
                   </label>
                 )}
 
-                <button
-                  type="button"
-                  className="set-row__delete"
-                  aria-label={`Remove set ${set.setNumber}`}
-                  disabled={sets.length === 1}
-                  onClick={() => removeSet(set.id)}
-                >
-                  <Trash2 size={17} />
-                </button>
+                {readOnly ? (
+                  <span />
+                ) : (
+                  <button
+                    type="button"
+                    className="set-row__delete"
+                    aria-label={`Remove set ${set.setNumber}`}
+                    disabled={sets.length === 1}
+                    onClick={() => removeSet(set.id)}
+                  >
+                    <Trash2 size={17} />
+                  </button>
+                )}
               </div>
             ))}
           </div>
 
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={addSet}
-          >
-            <Plus size={17} />
-            Add set
-          </button>
+          {!readOnly && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={addSet}
+            >
+              <Plus size={17} />
+              Add set
+            </button>
+          )}
         </div>
       )}
     </article>

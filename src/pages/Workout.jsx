@@ -21,6 +21,7 @@ import {
 import ExerciseCard from "../components/workout/ExerciseCard";
 import { useAuth } from "../context/useAuth";
 import { exerciseCatalog } from "../data/exerciseCatalog";
+import { getExerciseGuide } from "../data/exerciseLibrary";
 import {
   defaultWorkoutSchedule,
   getWeekdayKey,
@@ -370,6 +371,22 @@ function getFinishedDates(sessions) {
   );
 }
 
+function getWorkoutSetsFromSession(session, workout) {
+  if (!session) {
+    return null;
+  }
+
+  return Object.fromEntries(
+    workout.exercises.map((exercise) => {
+      const savedExercise = session.exercises.find(
+        (item) => item.exerciseId === exercise.id,
+      );
+
+      return [exercise.id, savedExercise?.sets ?? []];
+    }),
+  );
+}
+
 function formatShortDate(dateKey) {
   return new Intl.DateTimeFormat("en-US", {
     month: "short",
@@ -690,6 +707,8 @@ function Workout() {
     useState("");
   const [shareGroupIds, setShareGroupIds] = useState({});
   const [trackRir, setTrackRir] = useState(false);
+  const [activeExerciseId, setActiveExerciseId] =
+    useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
   const [exerciseEditorMode, setExerciseEditorMode] =
@@ -964,13 +983,29 @@ function Workout() {
   ]);
 
   const previousWorkout = history[0];
+  const previousWorkouts = useMemo(
+    () => history,
+    [history],
+  );
+  const selectedDayFinished = finishedDates.has(selectedDate);
+  const selectedFinishedWorkout = previousWorkouts.find(
+    (session) => getDateKey(session.date) === selectedDate,
+  );
+  const finishedWorkoutSets = getWorkoutSetsFromSession(
+    selectedFinishedWorkout,
+    workout,
+  );
+  const displayWorkoutSets =
+    selectedDayFinished && finishedWorkoutSets
+      ? finishedWorkoutSets
+      : workoutSets;
 
-  const completedSets = Object.values(workoutSets)
+  const completedSets = Object.values(displayWorkoutSets)
     .flat()
     .filter(isWorkoutSetLogged).length;
 
   const totalSets =
-    Object.values(workoutSets).flat().length;
+    Object.values(displayWorkoutSets).flat().length;
 
   const changeWorkoutDate = (dateKey) => {
     const day = getWeekdayKey(getDateFromKey(dateKey));
@@ -1082,6 +1117,7 @@ function Workout() {
         ...current,
         [exercise.id]: createExerciseSets(exercise),
       }));
+      setActiveExerciseId(exercise.id);
       setStatusMessage("Exercise added for this workout.");
     }
 
@@ -1317,11 +1353,6 @@ function Workout() {
     }
   };
 
-  const previousWorkouts = useMemo(
-    () => history,
-    [history],
-  );
-  const selectedDayFinished = finishedDates.has(selectedDate);
   const getDateState = (dateKey) => {
     const day = getWeekdayKey(getDateFromKey(dateKey));
 
@@ -1354,6 +1385,94 @@ function Workout() {
     saved: "Draft saved",
     error: "Draft save failed",
   }[draftSaveStatus];
+
+  const getExerciseLoggedSetCount = (exercise) =>
+    (displayWorkoutSets[exercise.id] ?? []).filter(isWorkoutSetLogged)
+      .length;
+
+  const isExerciseComplete = (exercise) => {
+    const sets = displayWorkoutSets[exercise.id] ?? [];
+
+    return (
+      sets.length > 0 &&
+      getExerciseLoggedSetCount(exercise) >= sets.length
+    );
+  };
+
+  const getExerciseNavMeta = (exercise) => {
+    const guide = getExerciseGuide(exercise);
+    const setCount =
+      (displayWorkoutSets[exercise.id] ?? []).length ||
+      exercise.sets;
+
+    if (!guide) {
+      return `${setCount} sets`;
+    }
+
+    const seenParts = new Set();
+    const guideParts = [guide.category, ...guide.primaryMuscles]
+      .filter((part) => {
+        const normalizedPart = part?.trim().toLowerCase();
+
+        if (!normalizedPart || seenParts.has(normalizedPart)) {
+          return false;
+        }
+
+        seenParts.add(normalizedPart);
+        return true;
+      })
+      .slice(0, 3)
+      .join(" • ");
+
+    return `${setCount} sets • ${guideParts}`;
+  };
+
+  const renderExerciseLogger = (exercise) => {
+    const previousExercise =
+      previousWorkout?.exercises.find(
+        (item) => item.exerciseId === exercise.id,
+      );
+    const exerciseSets =
+      selectedDayFinished &&
+      displayWorkoutSets[exercise.id]?.length
+        ? displayWorkoutSets[exercise.id]
+        : workoutSets[exercise.id] ??
+          createExerciseSets(exercise);
+
+    return (
+      <ExerciseCard
+        key={exercise.id}
+        exercise={exercise}
+        sets={exerciseSets}
+        previousSets={
+          selectedDayFinished
+            ? []
+            : previousExercise?.sets ?? []
+        }
+        showRir={trackRir}
+        onSetsChange={(sets) =>
+          updateExerciseSets(exercise.id, sets)
+        }
+        onEdit={
+          selectedDayFinished
+            ? undefined
+            : () => openEditExercise(exercise)
+        }
+        onSkip={
+          selectedDayFinished
+            ? undefined
+            : () => skipExercise(exercise)
+        }
+        readOnly={selectedDayFinished}
+        hidePrevious={selectedDayFinished}
+      />
+    );
+  };
+
+  const activeExercise =
+    workout.exercises.find(
+      (exercise) => exercise.id === activeExerciseId,
+    ) ?? workout.exercises[0];
 
   return (
     <div className="page workout-page">
@@ -1495,7 +1614,13 @@ function Workout() {
         })}
       </section>
 
-      <section className="workout-progress-card">
+      <section
+        className={`workout-progress-card ${
+          !isCompletionWorkout
+            ? "workout-progress-card--desktop-hidden"
+            : ""
+        }`}
+      >
         <div>
           <span>Workout progress</span>
           <strong>
@@ -1536,13 +1661,95 @@ function Workout() {
         </div>
       )}
 
-      <section className="exercise-list">
+      {!isCompletionWorkout && (
+        <section className="workout-desktop-layout">
+          <aside
+            className="workout-exercise-nav"
+            aria-label="Workout exercises"
+          >
+            <div className="workout-exercise-nav__summary">
+              <span>Workout progress</span>
+              <strong>
+                {completedSets} of {totalSets} sets
+              </strong>
+              <small>{draftStatusText}</small>
+
+              <div className="workout-progress-bar">
+                <span
+                  style={{
+                    width: `${
+                      totalSets
+                        ? (completedSets / totalSets) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="workout-exercise-nav__list">
+              {workout.exercises.map((exercise) => {
+                const isActive =
+                  exercise.id === activeExercise?.id;
+                const isComplete =
+                  isExerciseComplete(exercise);
+
+                return (
+                  <button
+                    type="button"
+                    key={exercise.id}
+                    className={`workout-exercise-nav__item ${
+                      isActive
+                        ? "workout-exercise-nav__item--active"
+                        : ""
+                    }`}
+                    onClick={() =>
+                      setActiveExerciseId(exercise.id)
+                    }
+                  >
+                    <span
+                      className={`workout-exercise-nav__check ${
+                        isComplete
+                          ? "workout-exercise-nav__check--complete"
+                          : ""
+                      }`}
+                    >
+                      {isComplete && <Check size={12} />}
+                    </span>
+
+                    <span>
+                      <strong>{exercise.name}</strong>
+                      <small>{getExerciseNavMeta(exercise)}</small>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {!selectedDayFinished && (
+              <button
+                type="button"
+                className="secondary-button workout-exercise-nav__add"
+                onClick={openAddExercise}
+              >
+                <Plus size={17} />
+                Add exercise
+              </button>
+            )}
+          </aside>
+
+          <div className="workout-active-exercise">
+            {activeExercise && renderExerciseLogger(activeExercise)}
+          </div>
+        </section>
+      )}
+
+      <section
+        className={`exercise-list ${
+          !isCompletionWorkout ? "exercise-list--mobile" : ""
+        }`}
+      >
         {workout.exercises.map((exercise) => {
-          const previousExercise =
-            previousWorkout?.exercises.find(
-              (item) =>
-                item.exerciseId === exercise.id,
-            );
           const completionSet =
             workoutSets[exercise.id]?.[0];
 
@@ -1581,31 +1788,10 @@ function Workout() {
             );
           }
 
-          return (
-            <ExerciseCard
-              key={exercise.id}
-              exercise={exercise}
-              sets={
-                workoutSets[exercise.id] ??
-                createExerciseSets(exercise)
-              }
-              previousSets={
-                previousExercise?.sets ?? []
-              }
-              showRir={trackRir}
-              onSetsChange={(sets) =>
-                updateExerciseSets(
-                  exercise.id,
-                  sets,
-                )
-              }
-              onEdit={() => openEditExercise(exercise)}
-              onSkip={() => skipExercise(exercise)}
-            />
-          );
+          return renderExerciseLogger(exercise);
         })}
 
-        {!isCompletionWorkout && (
+        {!isCompletionWorkout && !selectedDayFinished && (
           <button
             type="button"
             className="secondary-button workout-page__add-exercise"
