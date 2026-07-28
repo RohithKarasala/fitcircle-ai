@@ -95,6 +95,7 @@ function createExerciseSets(exercise) {
       reps: "",
       rir: "",
       resistanceType,
+      exerciseNote: "",
     }),
   );
 }
@@ -120,6 +121,7 @@ function resizeExerciseSets(currentSets, setCount) {
           reps: "",
           rir: "",
           resistanceType,
+          exerciseNote: existingSets[0]?.exerciseNote ?? "",
         };
   });
 }
@@ -137,6 +139,7 @@ function createWorkoutState(workout) {
               reps: "",
               rir: "",
               resistanceType: getDefaultResistanceType(exercise),
+              exerciseNote: "",
               completed: false,
             },
           ]
@@ -252,6 +255,7 @@ function normalizeWorkoutSets(workoutSets, workout) {
         resistanceType:
           set.resistanceType ??
           getDefaultResistanceType(exercise),
+        exerciseNote: set.exerciseNote ?? "",
       })),
     ]),
   );
@@ -1125,6 +1129,7 @@ function Workout() {
             reps: nextCompleted ? "1" : "",
             rir: "",
             resistanceType: "bodyweight",
+            exerciseNote: currentSet?.exerciseNote ?? "",
             completed: nextCompleted,
           },
         ],
@@ -1744,9 +1749,16 @@ function Workout() {
                         <div
                           key={exercise.exerciseId}
                         >
-                          <strong>
-                            {exercise.exerciseName}
-                          </strong>
+                          <div>
+                            <strong>
+                              {exercise.exerciseName}
+                            </strong>
+                            {exercise.exerciseNote && (
+                              <small>
+                                {exercise.exerciseNote}
+                              </small>
+                            )}
+                          </div>
 
                           <span>
                             {exercise.sets

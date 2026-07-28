@@ -13,11 +13,12 @@ import {
   getResistanceTypeLabel,
   getWeightFieldLabel,
   isBodyweightResistance,
+  normalizeResistanceType,
   resistanceTypes,
 } from "../../utils/workoutMetrics";
 import ExerciseGuide from "./ExerciseGuide";
 
-function createSet(setNumber, resistanceType) {
+function createSet(setNumber, resistanceType, exerciseNote = "") {
   return {
     id: crypto.randomUUID(),
     setNumber,
@@ -25,6 +26,7 @@ function createSet(setNumber, resistanceType) {
     reps: "",
     rir: "",
     resistanceType,
+    exerciseNote,
   };
 }
 
@@ -45,6 +47,12 @@ function ExerciseCard({
   const weightFieldLabel = getWeightFieldLabel(resistanceType);
   const usesBodyweight =
     isBodyweightResistance(resistanceType);
+  const exerciseNote = sets[0]?.exerciseNote ?? "";
+  const matchingPreviousSets = (previousSets ?? []).filter(
+    (set) =>
+      normalizeResistanceType(set.resistanceType) ===
+      normalizeResistanceType(resistanceType),
+  );
 
   const updateSet = (setId, field, value) => {
     onSetsChange(
@@ -60,13 +68,28 @@ function ExerciseCard({
   };
 
   const updateResistanceType = (value) => {
+    const isSameResistanceType =
+      normalizeResistanceType(value) ===
+      normalizeResistanceType(resistanceType);
+
     onSetsChange(
       sets.map((set) => ({
         ...set,
         resistanceType: value,
-        weight: isBodyweightResistance(value)
-          ? ""
-          : set.weight,
+        weight:
+          isBodyweightResistance(value) ||
+          !isSameResistanceType
+            ? ""
+            : set.weight,
+      })),
+    );
+  };
+
+  const updateExerciseNote = (value) => {
+    onSetsChange(
+      sets.map((set) => ({
+        ...set,
+        exerciseNote: value,
       })),
     );
   };
@@ -74,7 +97,7 @@ function ExerciseCard({
   const addSet = () => {
     onSetsChange([
       ...sets,
-      createSet(sets.length + 1, resistanceType),
+      createSet(sets.length + 1, resistanceType, exerciseNote),
     ]);
   };
 
@@ -192,12 +215,12 @@ function ExerciseCard({
         <div className="exercise-card__body">
           <p className="exercise-description">{exercise.description}</p>
 
-          {previousSets?.length > 0 && (
+          {matchingPreviousSets.length > 0 && (
             <div className="previous-performance">
               <span>Previous</span>
 
               <div>
-                {previousSets.map((set) => (
+                {matchingPreviousSets.map((set) => (
                   <small key={set.setNumber}>
                     {formatSetPerformance(set, {
                       showRir,
@@ -244,6 +267,17 @@ function ExerciseCard({
               showRir ? "" : "set-table--no-rir"
             }`}
           >
+            <label className="exercise-note">
+              <span>Variation note</span>
+              <input
+                value={exerciseNote}
+                onChange={(event) =>
+                  updateExerciseNote(event.target.value)
+                }
+                placeholder="Wide grip, smith machine, rope, feet high..."
+              />
+            </label>
+
             <div className="set-table__header">
               <span>Set</span>
               <span>{weightFieldLabel}</span>
@@ -270,7 +304,7 @@ function ExerciseCard({
                       inputMode="decimal"
                       value={set.weight}
                       placeholder={
-                        previousSets?.[set.setNumber - 1]
+                        matchingPreviousSets[set.setNumber - 1]
                           ?.weight ?? "0"
                       }
                       onChange={(event) =>
@@ -295,7 +329,8 @@ function ExerciseCard({
                     inputMode="numeric"
                     value={set.reps}
                     placeholder={
-                      previousSets?.[set.setNumber - 1]?.reps ?? "0"
+                      matchingPreviousSets[set.setNumber - 1]
+                        ?.reps ?? "0"
                     }
                     onChange={(event) =>
                       updateSet(set.id, "reps", event.target.value)

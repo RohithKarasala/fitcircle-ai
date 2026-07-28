@@ -37,6 +37,7 @@ function groupSetsBySession(sessions, sets) {
           ? ""
           : String(set.rir),
       resistanceType: set.resistance_type ?? null,
+      exerciseNote: set.exercise_note ?? "",
       exerciseId: set.exercise_id,
       exerciseName: set.exercise_name,
     });
@@ -52,6 +53,7 @@ function groupSetsBySession(sessions, sets) {
       const existingExercise = exerciseMap.get(set.exerciseId) ?? {
         exerciseId: set.exerciseId,
         exerciseName: set.exerciseName,
+        exerciseNote: set.exerciseNote,
         sets: [],
       };
 
@@ -67,6 +69,7 @@ function groupSetsBySession(sessions, sets) {
             id: set.exerciseId,
             name: set.exerciseName,
           }),
+        exerciseNote: set.exerciseNote,
       });
 
       exerciseMap.set(set.exerciseId, existingExercise);
@@ -228,6 +231,7 @@ export async function saveWorkoutSession({
       reps: normalizeNullableNumber(set.reps),
       rir: normalizeNullableNumber(set.rir),
       resistance_type: resistanceType,
+      exercise_note: set.exerciseNote?.trim() || null,
     };
   });
 
@@ -309,7 +313,8 @@ export async function getUserWorkoutHistory({
         weight,
         reps,
         rir,
-        resistance_type
+        resistance_type,
+        exercise_note
       `,
     )
     .eq("user_id", userId)

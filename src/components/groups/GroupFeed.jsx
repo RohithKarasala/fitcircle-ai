@@ -155,6 +155,9 @@ function GroupFeed({ groupId }) {
               {exercises.map((exercise) => (
                 <div key={exercise.exerciseId}>
                   <strong>{exercise.exerciseName}</strong>
+                  {exercise.exerciseNote && (
+                    <small>{exercise.exerciseNote}</small>
+                  )}
                   <span>
                     {(exercise.sets ?? [])
                       .map(

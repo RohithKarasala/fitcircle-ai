@@ -2260,6 +2260,35 @@ a {
   margin-bottom: 13px;
 }
 
+.exercise-note {
+  display: grid;
+  gap: 7px;
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+.exercise-note input {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 11px;
+  color: var(--text);
+  background: #0e1115;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  outline: none;
+}
+
+.exercise-note input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgb(183 243 74 / 10%);
+}
+
+.exercise-note input::placeholder {
+  color: #555e6b;
+}
+
 .set-table__header,
 .set-row {
   display: grid;
@@ -2538,14 +2567,26 @@ a {
   gap: 11px;
 }
 
-.workout-history__exercises div {
+.workout-history__exercises > div {
   display: grid;
   grid-template-columns: minmax(160px, 0.75fr) 1.5fr;
   gap: 16px;
 }
 
+.workout-history__exercises > div > div {
+  display: grid;
+  gap: 4px;
+}
+
 .workout-history__exercises strong {
   font-size: 0.82rem;
+}
+
+.workout-history__exercises small,
+.group-feed-card__exercises small {
+  color: #91a06f;
+  font-size: 0.76rem;
+  font-weight: 700;
 }
 
 .workout-history__exercises span {
@@ -3711,7 +3752,7 @@ input:-webkit-autofill:focus {
 }
 
 .group-feed-card__exercises div,
-.workout-history__exercises div {
+.workout-history__exercises > div {
   min-width: 0;
 }
 
