@@ -71,6 +71,24 @@ const nutritionMetrics = [
   },
 ];
 
+const metricColors = {
+  calories: "#c8f550",
+  protein: "#8ea7ff",
+  carbs: "#f5c95b",
+  fat: "#ff9f5a",
+  fiber: "#4fd3a6",
+  water: "#5bc9f5",
+};
+
+const macroCaloriesPerUnit = {
+  protein: 4,
+  carbs: 4,
+  fat: 9,
+  fiber: 2,
+};
+
+const overviewMetricKeys = ["protein", "carbs", "fat", "fiber"];
+
 function toNumber(value) {
   const number = Number(value);
 
@@ -118,6 +136,119 @@ function getTotals(entries) {
       fiber: 0,
       water: 0,
     },
+  );
+}
+
+function getMacroCalorieSegments(totals, metrics) {
+  return metrics
+    .map(({ key }) => ({
+      key,
+      color: metricColors[key],
+      calories:
+        toNumber(totals[key]) *
+        (macroCaloriesPerUnit[key] ?? 0),
+    }))
+    .filter(({ calories }) => calories > 0);
+}
+
+function CalorieRing({ current, target, segments = [] }) {
+  const targetNumber = toNumber(target);
+  const currentNumber = toNumber(current);
+  const remaining = Math.max(0, targetNumber - currentNumber);
+  const radius = 88;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="nutrition-calorie-ring">
+      <svg viewBox="0 0 220 220" aria-hidden="true">
+        <circle
+          className="nutrition-calorie-ring__track"
+          cx="110"
+          cy="110"
+          r={radius}
+        />
+        {targetNumber > 0 &&
+          segments.map((segment) => {
+            const available = Math.max(
+              0,
+              targetNumber - offset,
+            );
+            const calories = Math.min(
+              segment.calories,
+              available,
+            );
+            const length =
+              (calories / targetNumber) * circumference;
+            const dashOffset =
+              (-offset / targetNumber) * circumference;
+
+            offset += calories;
+
+            if (length <= 0) {
+              return null;
+            }
+
+            return (
+              <circle
+                className="nutrition-calorie-ring__segment"
+                cx="110"
+                cy="110"
+                key={segment.key}
+                r={radius}
+                stroke={segment.color}
+                strokeDasharray={`${length} ${
+                  circumference - length
+                }`}
+                strokeDashoffset={dashOffset}
+              />
+            );
+          })}
+      </svg>
+
+      <div>
+        <strong>{formatAmount(remaining, "cal")}</strong>
+        <span>cal left</span>
+        <small>
+          {formatAmount(currentNumber, "cal")} /{" "}
+          {formatAmount(targetNumber, "cal")} cal
+        </small>
+      </div>
+    </div>
+  );
+}
+
+function MacroBar({ metric, current, target }) {
+  const { key, label, unit, Icon } = metric;
+  const progress = getProgress(current, target);
+  const color = metricColors[key];
+
+  return (
+    <div className="nutrition-macro-bar">
+      <div className="nutrition-macro-bar__header">
+        <span style={{ "--metric-color": color }}>
+          <Icon size={16} />
+        </span>
+        <small>{label}</small>
+      </div>
+
+      <strong>
+        {formatAmount(current, unit)}
+        <span>
+          {" "}
+          / {formatAmount(target, unit)}
+        </span>
+      </strong>
+
+      <div className="nutrition-macro-bar__track">
+        <span
+          style={{
+            width: `${progress}%`,
+            backgroundColor: color,
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -182,6 +313,17 @@ function Nutrition() {
 
   const totals = useMemo(() => getTotals(entries), [entries]);
   const isTodaySelected = date === todayKey;
+  const overviewMetrics = useMemo(
+    () =>
+      nutritionMetrics.filter(({ key }) =>
+        overviewMetricKeys.includes(key),
+      ),
+    [],
+  );
+  const calorieSegments = useMemo(
+    () => getMacroCalorieSegments(totals, overviewMetrics),
+    [overviewMetrics, totals],
+  );
 
   useEffect(() => {
     let isCurrent = true;
@@ -476,80 +618,66 @@ function Nutrition() {
         </section>
       ) : (
         <>
-          <section className="nutrition-page__summary">
-            {nutritionMetrics.map(({ key, label, unit, Icon }) => {
-              const current = totals[key];
-              const target = targets[key];
-              const progress = getProgress(current, target);
-              const remaining = Math.max(
-                0,
-                toNumber(target) - toNumber(current),
-              );
+          <Card className="nutrition-overview-card">
+            <div className="nutrition-overview-card__main">
+              <CalorieRing
+                current={totals.calories}
+                segments={calorieSegments}
+                target={targets.calories}
+              />
 
-              return (
-                <Card
-                  className="nutrition-metric"
+              <div className="nutrition-macro-grid">
+                {overviewMetrics.map((metric) => (
+                  <MacroBar
+                    key={metric.key}
+                    metric={metric}
+                    current={totals[metric.key]}
+                    target={targets[metric.key]}
+                  />
+                ))}
+              </div>
+            </div>
+          </Card>
+
+          <Card className="nutrition-target-card">
+            <div className="nutrition-target-card__heading">
+              <div>
+                <h2>Daily targets</h2>
+                <p>Adjust goals without leaving the page.</p>
+              </div>
+
+              <Button
+                variant="secondary"
+                loading={isSavingTargets}
+                disabled={isNutritionLoading}
+                onClick={handleSaveTargets}
+              >
+                <Save size={17} />
+                Save targets
+              </Button>
+            </div>
+
+            <div className="nutrition-target-grid">
+              {nutritionMetrics.map(({ key, label, unit }) => (
+                <label
+                  className="nutrition-target-input"
                   key={key}
-                  padding="medium"
                 >
-                  <div className="nutrition-metric__header">
-                    <span>
-                      <Icon size={18} />
-                    </span>
-
-                    <small>{label}</small>
-                  </div>
-
-                  <strong>
-                    {formatAmount(current, unit)}
-                    <span>
-                      {" "}
-                      / {formatAmount(target, unit)}
-                      {unit === "cal" ? " cal" : ""}
-                    </span>
-                  </strong>
-
-                  <div className="nutrition-metric__track">
-                    <span style={{ width: `${progress}%` }} />
-                  </div>
-
-                  <p>
-                    {remaining > 0
-                      ? `${formatAmount(remaining, unit)} ${
-                          unit === "cal" ? "cal " : ""
-                        }left`
-                      : "Target reached"}
-                  </p>
-
-                  <label className="nutrition-metric__target">
-                    <span>Target</span>
-                    <input
-                      type="number"
-                      min="0"
-                      step={unit === "cal" ? "1" : "0.1"}
-                      value={targets[key]}
-                      disabled={isNutritionLoading}
-                      onChange={(event) =>
-                        updateTarget(key, event.target.value)
-                      }
-                    />
-                  </label>
-                </Card>
-              );
-            })}
-          </section>
-
-          <div className="nutrition-page__target-actions">
-            <Button
-              variant="secondary"
-              loading={isSavingTargets}
-              disabled={isNutritionLoading}
-              onClick={handleSaveTargets}
-            >
-              <Save size={17} />
-              Save targets
-            </Button>
-          </div>
+                  <span>{label}</span>
+                  <input
+                    type="number"
+                    min="0"
+                    step={unit === "cal" ? "1" : "0.1"}
+                    value={targets[key]}
+                    disabled={isNutritionLoading}
+                    onChange={(event) =>
+                      updateTarget(key, event.target.value)
+                    }
+                  />
+                </label>
+              ))}
+            </div>
+          </Card>
 
           <Card className="nutrition-page__card">
             <div className="nutrition-page__card-heading">
