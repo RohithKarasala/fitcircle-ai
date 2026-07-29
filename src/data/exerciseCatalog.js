@@ -1,7 +1,7 @@
 export const exerciseCatalog = [
   {
     id: "abdominal-crunch",
-    name: "Abdominal Crunch",
+    name: "Abdominal",
     category: "Core",
     equipment: "Machine or cable",
     sets: 3,

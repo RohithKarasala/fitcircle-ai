@@ -77,6 +77,7 @@ const refreshedExerciseNames = {
   "lat-pulldown-friday": [
     "Lat Pulldown or Assisted Pull-Ups",
   ],
+  "torso-crunch-machine": ["Torso Crunch Machine"],
 };
 
 const previousExerciseIds = Object.fromEntries(
@@ -85,6 +86,67 @@ const previousExerciseIds = Object.fromEntries(
     previousId,
   ]),
 );
+
+const exerciseHistoryAliases = {
+  "wide-grip-pulldown-tuesday": [
+    "lat-pulldown-friday",
+    "assisted-pull-up",
+  ],
+  "lat-pulldown-friday": [
+    "wide-grip-pulldown-tuesday",
+    "assisted-pull-up",
+  ],
+};
+
+const exerciseNameAliases = {
+  abdominal: ["abdominal-crunch"],
+  "abdominal-crunch": ["abdominal"],
+  "pull-ups": [
+    "assisted-pull-up",
+    "wide-grip-lat-pulldown-or-assisted-pull-ups",
+    "lat-pulldown-or-assisted-pull-ups",
+  ],
+  "assisted-pull-up": ["pull-ups"],
+};
+
+function normalizeExerciseName(value = "") {
+  return value
+    .toLowerCase()
+    .replace(/&/g, "and")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+function getExerciseMatchIds(exercise) {
+  return new Set(
+    [
+      exercise.id,
+      previousExerciseIds[exercise.id],
+      ...(exerciseHistoryAliases[exercise.id] ?? []),
+    ].filter(Boolean),
+  );
+}
+
+function getExerciseMatchNames(exercise) {
+  const normalizedName = normalizeExerciseName(exercise.name);
+
+  return new Set(
+    [
+      normalizedName,
+      ...(exerciseNameAliases[normalizedName] ?? []),
+    ].map(normalizeExerciseName),
+  );
+}
+
+function isMatchingHistoryExercise(exercise, historyExercise) {
+  const matchIds = getExerciseMatchIds(exercise);
+  const matchNames = getExerciseMatchNames(exercise);
+
+  return (
+    matchIds.has(historyExercise.exerciseId) ||
+    matchNames.has(normalizeExerciseName(historyExercise.exerciseName))
+  );
+}
 
 function createExerciseSets(exercise) {
   const resistanceType = getDefaultResistanceType(exercise);
@@ -708,6 +770,7 @@ function Workout() {
   );
 
   const [history, setHistory] = useState([]);
+  const [exerciseHistory, setExerciseHistory] = useState([]);
   const [isHistoryLoading, setIsHistoryLoading] =
     useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -846,6 +909,7 @@ function Workout() {
   const loadHistory = useCallback(async () => {
     if (!user) {
       setHistory([]);
+      setExerciseHistory([]);
       return;
     }
 
@@ -855,13 +919,21 @@ function Workout() {
     try {
       await ensureUserProfile(user);
 
-      const sessions = await getUserWorkoutHistory({
-        userId: user.id,
-        workoutDay: selectedDay,
-        limit: 10,
-      });
+      const [sessions, recentExerciseSessions] =
+        await Promise.all([
+          getUserWorkoutHistory({
+            userId: user.id,
+            workoutDay: selectedDay,
+            limit: 10,
+          }),
+          getUserWorkoutHistory({
+            userId: user.id,
+            limit: 50,
+          }),
+        ]);
 
       setHistory(sessions);
+      setExerciseHistory(recentExerciseSessions);
     } catch (error) {
       console.error(error);
       setErrorMessage(error.message);
@@ -1004,7 +1076,6 @@ function Workout() {
     workoutSets,
   ]);
 
-  const previousWorkout = history[0];
   const previousWorkouts = useMemo(
     () => history,
     [history],
@@ -1451,10 +1522,9 @@ function Workout() {
     exercise,
     { autoCollapseOnComplete = false } = {},
   ) => {
-    const previousExercise =
-      previousWorkout?.exercises.find(
-        (item) => item.exerciseId === exercise.id,
-      );
+    const previousExercise = exerciseHistory
+      .flatMap((session) => session.exercises)
+      .find((item) => isMatchingHistoryExercise(exercise, item));
     const exerciseSets =
       selectedDayFinished &&
       displayWorkoutSets[exercise.id]?.length

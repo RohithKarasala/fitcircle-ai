@@ -234,15 +234,14 @@ export const workoutProgram = {
           "Keep your torso stable and drive through the hip without arching your lower back.",
       },
       {
-        id: "leg-press-optional-wednesday",
-        name: "Leg Press",
+        id: "abdominal-crunch",
+        name: "Abdominal",
         equipment: "Machine",
         sets: 3,
         repRange: "10–15",
-        restSeconds: 120,
-        optional: true,
+        restSeconds: 60,
         description:
-          "Optional finisher. Only perform this if your energy and recovery are good after the other leg exercises.",
+          "Bring your ribs toward your pelvis using your abdominal muscles rather than pulling only with your arms.",
       },
     ],
   },
@@ -394,13 +393,13 @@ export const workoutProgram = {
       },
       {
         id: "torso-crunch-machine",
-        name: "Torso Crunch Machine",
+        name: "Torso Rotation",
         equipment: "Machine",
         sets: 3,
         repRange: "12–15",
         restSeconds: 60,
         description:
-          "Bring your ribs toward your pelvis using your abdominal muscles rather than pulling only with your arms.",
+          "Rotate through a controlled range with your hips anchored and your ribs stacked over your pelvis.",
       },
       {
         id: "hanging-leg-raise",
@@ -473,7 +472,7 @@ export const workoutProgram = {
       },
       {
         id: "abdominal-crunch",
-        name: "Abdominal Crunch",
+        name: "Abdominal",
         equipment: "Machine, cable, or bodyweight",
         sets: 3,
         repRange: "10–15",
