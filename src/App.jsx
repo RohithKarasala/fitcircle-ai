@@ -1,32 +1,104 @@
+import { lazy, Suspense } from "react";
+import { LoaderCircle } from "lucide-react";
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import AppLayout from "./components/layout/AppLayout";
 
-import Coach from "./pages/Coach";
-import Dashboard from "./pages/Dashboard";
-import GroupDetails from "./pages/GroupDetails";
-import Groups from "./pages/Groups";
-import Nutrition from "./pages/Nutrition";
-import Progress from "./pages/Progress";
-import Settings from "./pages/Settings";
-import Workout from "./pages/Workout";
+const Coach = lazy(() => import("./pages/Coach"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const GroupDetails = lazy(() => import("./pages/GroupDetails"));
+const Groups = lazy(() => import("./pages/Groups"));
+const Nutrition = lazy(() => import("./pages/Nutrition"));
+const Progress = lazy(() => import("./pages/Progress"));
+const Settings = lazy(() => import("./pages/Settings"));
+const Workout = lazy(() => import("./pages/Workout"));
+
+function RouteLoading() {
+  return (
+    <div className="route-loading">
+      <LoaderCircle className="spin" size={20} />
+      Loading page...
+    </div>
+  );
+}
+
+function PageRoute({ children }) {
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      {children}
+    </Suspense>
+  );
+}
 
 function App() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
-        <Route index element={<Dashboard />} />
+        <Route
+          index
+          element={
+            <PageRoute>
+              <Dashboard />
+            </PageRoute>
+          }
+        />
 
-        <Route path="workout" element={<Workout />} />
-        <Route path="groups" element={<Groups />} />
+        <Route
+          path="workout"
+          element={
+            <PageRoute>
+              <Workout />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="groups"
+          element={
+            <PageRoute>
+              <Groups />
+            </PageRoute>
+          }
+        />
         <Route
           path="groups/:groupId"
-          element={<GroupDetails />}
+          element={
+            <PageRoute>
+              <GroupDetails />
+            </PageRoute>
+          }
         />
-        <Route path="progress" element={<Progress />} />
-        <Route path="nutrition" element={<Nutrition />} />
-        <Route path="coach" element={<Coach />} />
-        <Route path="settings" element={<Settings />} />
+        <Route
+          path="progress"
+          element={
+            <PageRoute>
+              <Progress />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="nutrition"
+          element={
+            <PageRoute>
+              <Nutrition />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="coach"
+          element={
+            <PageRoute>
+              <Coach />
+            </PageRoute>
+          }
+        />
+        <Route
+          path="settings"
+          element={
+            <PageRoute>
+              <Settings />
+            </PageRoute>
+          }
+        />
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>

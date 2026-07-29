@@ -3210,6 +3210,20 @@ a {
   border-radius: 14px;
 }
 
+.route-loading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 24px;
+  padding: 18px 20px;
+  color: var(--muted);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  font-size: 0.88rem;
+  font-weight: 800;
+}
+
 .spin {
   animation: fitcircle-spin 800ms linear infinite;
 }
