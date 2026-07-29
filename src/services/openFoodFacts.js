@@ -65,7 +65,6 @@ function mapProduct(product = {}) {
     carbs: normalizeNumber(nutriments.carbohydrates_100g),
     fat: normalizeNumber(nutriments.fat_100g),
     fiber: normalizeNumber(nutriments.fiber_100g),
-    water: "",
   };
 }
 

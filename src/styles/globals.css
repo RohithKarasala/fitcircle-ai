@@ -1096,56 +1096,104 @@ a {
 }
 
 .nutrition-target-card {
-  display: grid;
-  gap: 16px;
+  overflow: hidden;
+  padding: 0;
 }
 
-.nutrition-target-card__heading {
+.nutrition-target-card__toggle {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  width: 100%;
+  padding: 18px 20px;
+  color: inherit;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  transition:
+    background var(--fc-transition),
+    color var(--fc-transition);
 }
 
-.nutrition-target-card__heading h2 {
+.nutrition-target-card__toggle:hover {
+  background: rgb(255 255 255 / 2.5%);
+}
+
+.nutrition-target-card__toggle svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.nutrition-target-card__toggle h2 {
   margin: 0;
   color: var(--text);
   font-size: 1.08rem;
   letter-spacing: -0.025em;
 }
 
-.nutrition-target-card__heading p {
+.nutrition-target-card__toggle p {
   margin: 4px 0 0;
   color: var(--muted);
   font-size: 0.82rem;
 }
 
+.nutrition-target-card__body {
+  display: grid;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  border-top: 1px solid rgb(255 255 255 / 6%);
+}
+
+.nutrition-target-card__body .button {
+  justify-self: end;
+}
+
 .nutrition-target-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 14px;
 }
 
 .nutrition-target-input {
   display: grid;
-  gap: 6px;
+  gap: 8px;
 }
 
 .nutrition-target-input span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   color: var(--muted);
   font-size: 0.7rem;
   font-weight: 900;
 }
 
+.nutrition-target-input__field {
+  position: relative;
+}
+
 .nutrition-target-input input {
   width: 100%;
   min-width: 0;
-  padding: 10px 11px;
+  padding: 10px 38px 10px 11px;
   color: var(--text);
   background: var(--surface-raised);
   border: 1px solid #303741;
   border-radius: 9px;
   outline: none;
+}
+
+.nutrition-target-input__field small {
+  position: absolute;
+  top: 50%;
+  right: 11px;
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  transform: translateY(-50%);
+  pointer-events: none;
 }
 
 .nutrition-target-input input:focus {
@@ -1189,7 +1237,7 @@ a {
   display: grid;
   grid-template-columns:
     minmax(190px, 1.4fr)
-    repeat(6, minmax(88px, 0.7fr))
+    repeat(5, minmax(88px, 0.7fr))
     auto;
   grid-template-rows: auto auto;
   align-items: start;
@@ -1331,7 +1379,7 @@ a {
   display: grid;
   grid-template-columns:
     minmax(160px, 1fr)
-    repeat(6, minmax(70px, 0.45fr))
+    repeat(5, minmax(70px, 0.45fr))
     44px;
   align-items: center;
   gap: 10px;
@@ -1815,12 +1863,11 @@ a {
     width: min(100%, 220px);
   }
 
-  .nutrition-target-card__heading {
-    align-items: stretch;
-    flex-direction: column;
+  .nutrition-target-card__toggle {
+    align-items: center;
   }
 
-  .nutrition-target-card__heading .button {
+  .nutrition-target-card__body .button {
     width: 100%;
   }
 
@@ -1881,10 +1928,6 @@ a {
 
   .nutrition-entry-row span:nth-of-type(5)::before {
     content: "Fiber";
-  }
-
-  .nutrition-entry-row span:nth-of-type(6)::before {
-    content: "Water";
   }
 
   .nutrition-entry-row button {

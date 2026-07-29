@@ -1,8 +1,9 @@
 import {
   CalendarDays,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Droplets,
+  ChevronUp,
   Dumbbell,
   Flame,
   Leaf,
@@ -63,21 +64,14 @@ const nutritionMetrics = [
     unit: "g",
     Icon: Leaf,
   },
-  {
-    key: "water",
-    label: "Hydration",
-    unit: "oz",
-    Icon: Droplets,
-  },
 ];
 
 const metricColors = {
   calories: "#c8f550",
   protein: "#8ea7ff",
   carbs: "#f5c95b",
-  fat: "#ff9f5a",
+  fat: "#ef6f61",
   fiber: "#4fd3a6",
-  water: "#5bc9f5",
 };
 
 const macroCaloriesPerUnit = {
@@ -126,7 +120,6 @@ function getTotals(entries) {
       carbs: totals.carbs + toNumber(entry.carbs),
       fat: totals.fat + toNumber(entry.fat),
       fiber: totals.fiber + toNumber(entry.fiber),
-      water: totals.water + toNumber(entry.water),
     }),
     {
       calories: 0,
@@ -134,7 +127,6 @@ function getTotals(entries) {
       carbs: 0,
       fat: 0,
       fiber: 0,
-      water: 0,
     },
   );
 }
@@ -252,6 +244,41 @@ function MacroBar({ metric, current, target }) {
   );
 }
 
+function TargetSummary({ targets }) {
+  return [
+    `${formatAmount(targets.calories, "cal")} cal`,
+    `${formatAmount(targets.protein, "g")} protein`,
+    `${formatAmount(targets.carbs, "g")} carbs`,
+    `${formatAmount(targets.fat, "g")} fat`,
+    `${formatAmount(targets.fiber, "g")} fiber`,
+  ].join(" · ");
+}
+
+function TargetInput({ metric, value, disabled, onChange }) {
+  const { key, label, unit, Icon } = metric;
+  const color = metricColors[key];
+
+  return (
+    <label className="nutrition-target-input">
+      <span>
+        <Icon size={14} style={{ color }} />
+        {label}
+      </span>
+      <div className="nutrition-target-input__field">
+        <input
+          type="number"
+          min="0"
+          step={unit === "cal" ? "1" : "0.1"}
+          value={value}
+          disabled={disabled}
+          onChange={onChange}
+        />
+        <small>{unit}</small>
+      </div>
+    </label>
+  );
+}
+
 function getDateFromKey(dateKey) {
   return new Date(`${dateKey}T00:00:00`);
 }
@@ -303,6 +330,7 @@ function Nutrition() {
   const [isSavingTargets, setIsSavingTargets] =
     useState(false);
   const [isAddingEntry, setIsAddingEntry] = useState(false);
+  const [areTargetsOpen, setAreTargetsOpen] = useState(false);
   const [foodSuggestions, setFoodSuggestions] = useState([]);
   const [isFoodSearchLoading, setIsFoodSearchLoading] =
     useState(false);
@@ -433,6 +461,7 @@ function Nutrition() {
       });
 
       setTargets(savedTargets);
+      setAreTargetsOpen(false);
       setNotice("Daily targets saved.");
     } catch (error) {
       setErrorMessage(error.message);
@@ -524,7 +553,6 @@ function Nutrition() {
       carbs: product.carbs,
       fat: product.fat,
       fiber: product.fiber,
-      water: current.water,
     }));
     setFoodSuggestions([]);
     setFoodSearchStatus("Autofilled per 100g. Adjust if needed.");
@@ -546,7 +574,7 @@ function Nutrition() {
         <div>
           <p className="eyebrow">Daily targets</p>
           <h1>Nutrition</h1>
-          <p>Monitor calories, protein, fiber, and hydration.</p>
+          <p>Monitor calories, protein, carbs, fats, and fiber.</p>
         </div>
 
         <div className="nutrition-date-control">
@@ -640,43 +668,57 @@ function Nutrition() {
           </Card>
 
           <Card className="nutrition-target-card">
-            <div className="nutrition-target-card__heading">
+            <button
+              type="button"
+              className="nutrition-target-card__toggle"
+              aria-expanded={areTargetsOpen}
+              onClick={() =>
+                setAreTargetsOpen((current) => !current)
+              }
+            >
               <div>
-                <h2>Daily targets</h2>
-                <p>Adjust goals without leaving the page.</p>
+                <h2>Edit daily targets</h2>
+                <p>
+                  <TargetSummary targets={targets} />
+                </p>
               </div>
 
-              <Button
-                variant="secondary"
-                loading={isSavingTargets}
-                disabled={isNutritionLoading}
-                onClick={handleSaveTargets}
-              >
-                <Save size={17} />
-                Save targets
-              </Button>
-            </div>
+              {areTargetsOpen ? (
+                <ChevronUp size={19} />
+              ) : (
+                <ChevronDown size={19} />
+              )}
+            </button>
 
-            <div className="nutrition-target-grid">
-              {nutritionMetrics.map(({ key, label, unit }) => (
-                <label
-                  className="nutrition-target-input"
-                  key={key}
+            {areTargetsOpen && (
+              <div className="nutrition-target-card__body">
+                <div className="nutrition-target-grid">
+                  {nutritionMetrics.map((metric) => (
+                    <TargetInput
+                      key={metric.key}
+                      metric={metric}
+                      value={targets[metric.key]}
+                      disabled={isNutritionLoading}
+                      onChange={(event) =>
+                        updateTarget(
+                          metric.key,
+                          event.target.value,
+                        )
+                      }
+                    />
+                  ))}
+                </div>
+
+                <Button
+                  loading={isSavingTargets}
+                  disabled={isNutritionLoading}
+                  onClick={handleSaveTargets}
                 >
-                  <span>{label}</span>
-                  <input
-                    type="number"
-                    min="0"
-                    step={unit === "cal" ? "1" : "0.1"}
-                    value={targets[key]}
-                    disabled={isNutritionLoading}
-                    onChange={(event) =>
-                      updateTarget(key, event.target.value)
-                    }
-                  />
-                </label>
-              ))}
-            </div>
+                  <Save size={17} />
+                  Save targets
+                </Button>
+              </div>
+            )}
           </Card>
 
           <Card className="nutrition-page__card">
@@ -793,7 +835,6 @@ function Nutrition() {
                   <span>Carbs</span>
                   <span>Fats</span>
                   <span>Fiber</span>
-                  <span>Water</span>
                   <span />
                 </div>
 
@@ -810,7 +851,6 @@ function Nutrition() {
                     <span>{formatAmount(entry.carbs, "g")}</span>
                     <span>{formatAmount(entry.fat, "g")}</span>
                     <span>{formatAmount(entry.fiber, "g")}</span>
-                    <span>{formatAmount(entry.water, "oz")}</span>
                     <button
                       type="button"
                       aria-label={`Remove ${entry.name}`}

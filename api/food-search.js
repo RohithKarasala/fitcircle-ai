@@ -49,7 +49,6 @@ function mapFood(food = {}) {
     carbs: getNutrient(food, nutrientIds.carbs),
     fat: getNutrient(food, nutrientIds.fat),
     fiber: getNutrient(food, nutrientIds.fiber),
-    water: "",
   };
 }
 
