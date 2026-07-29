@@ -607,7 +607,7 @@ a {
   align-self: flex-start;
 }
 
-.progress-card {
+.progress-stat-card {
   min-width: 0;
   padding: 20px;
   background: var(--surface);
@@ -615,13 +615,7 @@ a {
   border-radius: 16px;
 }
 
-.progress-card--accent {
-  background:
-    radial-gradient(circle at top right, rgb(183 243 74 / 13%), transparent 48%),
-    var(--surface);
-}
-
-.progress-card__header {
+.progress-stat-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -631,21 +625,37 @@ a {
   font-weight: 700;
 }
 
-.progress-card__header svg {
+.progress-stat-card__header svg {
   color: var(--primary);
 }
 
-.progress-card strong {
+.progress-stat-card > strong {
   display: block;
-  margin-top: 28px;
+  margin-top: 24px;
   font-size: 1.65rem;
   letter-spacing: -0.04em;
 }
 
-.progress-card p {
-  margin: 6px 0 0;
-  color: var(--muted);
-  font-size: 0.8rem;
+.progress-stat-card__delta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 5px 8px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.progress-stat-card__delta--positive {
+  color: var(--primary);
+  background: #202a15;
+}
+
+.progress-stat-card__delta--negative {
+  color: #ff8b7d;
+  background: #2a1719;
 }
 
 .progress-panel {
@@ -682,55 +692,18 @@ a {
   font-size: 0.86rem;
 }
 
-.progress-delta {
-  display: inline-flex;
-  flex-shrink: 0;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 10px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 800;
-}
-
-.progress-delta--positive {
-  color: var(--primary);
-  background: #202a15;
-  border: 1px solid #33431f;
-}
-
-.progress-delta--negative {
-  color: #ffb0b0;
-  background: #281517;
-  border: 1px solid #553033;
-}
-
-.progress-comparison {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.progress-comparison div {
-  padding: 16px;
-  background: var(--surface-raised);
-  border: 1px solid var(--border);
-  border-radius: 13px;
-}
-
-.progress-comparison span,
-.progress-comparison strong {
-  display: block;
-}
-
-.progress-comparison span {
+.progress-panel__range {
   color: var(--muted);
   font-size: 0.78rem;
+  font-weight: 900;
 }
 
-.progress-comparison strong {
-  margin-top: 5px;
-  font-size: 1.25rem;
+.progress-volume-chart {
+  height: 210px;
+  padding: 12px 6px 2px;
+  background: #0e1115;
+  border: 1px solid var(--border);
+  border-radius: 14px;
 }
 
 .progress-trend-list,
@@ -745,9 +718,37 @@ a {
   align-items: center;
   gap: 14px;
   padding: 15px;
-  background: var(--surface-raised);
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 13px;
+}
+
+.progress-trend--positive {
+  background: rgb(183 243 74 / 3%);
+  border-color: rgb(183 243 74 / 24%);
+}
+
+.progress-trend__identity {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+}
+
+.progress-trend__pr {
+  display: grid !important;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  color: var(--primary);
+  background: #202a15;
+  border: 1px solid #33431f;
+  border-radius: 999px;
+  place-items: center;
+}
+
+.progress-trend__metric {
+  min-width: 0;
 }
 
 .progress-trend span,
@@ -781,18 +782,35 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 16px;
+  width: 100%;
   padding: 15px;
-  background: var(--surface-raised);
+  color: var(--text);
+  text-align: left;
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 13px;
+  cursor: pointer;
+  transition:
+    background var(--fc-transition),
+    border-color var(--fc-transition);
+}
+
+.progress-session:hover {
+  background: rgb(255 255 255 / 2.5%);
+  border-color: #3a4655;
 }
 
 .progress-session > div:last-child {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   justify-content: flex-end;
   gap: 10px;
   text-align: right;
+}
+
+.progress-session svg {
+  color: var(--muted);
 }
 
 .progress-page__empty {
@@ -2968,11 +2986,6 @@ a {
     flex-direction: column;
   }
 
-  .progress-delta {
-    width: fit-content;
-  }
-
-  .progress-comparison,
   .progress-trend {
     grid-template-columns: 1fr;
   }

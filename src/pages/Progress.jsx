@@ -1,16 +1,26 @@
 import {
   Activity,
-  ArrowUpRight,
   BarChart3,
   CalendarDays,
+  ChevronRight,
   Cloud,
   Download,
   Dumbbell,
   LoaderCircle,
   LogIn,
+  TrendingDown,
+  TrendingUp,
   Trophy,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import {
+  Line,
+  LineChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import { useAuth } from "../context/useAuth";
 import { getUserWorkoutHistory } from "../services/workouts";
@@ -26,6 +36,7 @@ import {
 } from "../utils/workoutMetrics";
 
 const HISTORY_LIMIT = 100;
+const TREND_WEEKS = 5;
 
 function getSessionVolume(session) {
   return getSessionExternalVolume(session.exercises);
@@ -120,6 +131,19 @@ function getWeekRangeLabel(weekKey) {
   return `${formatDate(start)} - ${formatDate(end)}`;
 }
 
+function formatShortDate(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "Unknown";
+  }
+
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
 function summarizeSessions(sessions) {
   const totalVolume = sessions.reduce(
     (total, session) => total + getSessionVolume(session),
@@ -142,6 +166,36 @@ function summarizeSessions(sessions) {
         : bestSet;
     }, getBestSet({ exercises: [] })),
   };
+}
+
+function getWeeklyVolumeTrend(sessions, weekCount = TREND_WEEKS) {
+  const currentWeekStart = getWeekStart(new Date());
+
+  if (!currentWeekStart) {
+    return [];
+  }
+
+  return Array.from({ length: weekCount }, (_, index) => {
+    const weekStart = new Date(currentWeekStart);
+    weekStart.setDate(
+      currentWeekStart.getDate() -
+        (weekCount - 1 - index) * 7,
+    );
+
+    const weekKey = getWeekKey(weekStart);
+    const weekSessions = sessions.filter(
+      (session) => getWeekKey(session.date) === weekKey,
+    );
+
+    return {
+      week: formatShortDate(weekStart),
+      weekKey,
+      volume: weekSessions.reduce(
+        (total, session) => total + getSessionVolume(session),
+        0,
+      ),
+    };
+  });
 }
 
 function getPercentChange(current, previous) {
@@ -247,6 +301,109 @@ function getTrendChange(exercise) {
     )} lb`,
     isPositive: exercise.volumeChange >= 0,
   };
+}
+
+function getTrendBestLabel(exercise) {
+  if (exercise.latest.metricType === "assistance") {
+    return "Best assistance";
+  }
+
+  if (exercise.latest.metricType === "reps") {
+    return "Best reps";
+  }
+
+  return "Best weight";
+}
+
+function getTrendBestValue(exercise) {
+  if (exercise.latest.metricType === "assistance") {
+    return exercise.latest.bestAssistance > 0
+      ? `${formatNumber(exercise.latest.bestAssistance)} lb`
+      : "—";
+  }
+
+  if (exercise.latest.metricType === "reps") {
+    return `${formatNumber(exercise.latest.totalReps)} reps`;
+  }
+
+  return exercise.latest.bestWeight > 0
+    ? `${formatNumber(exercise.latest.bestWeight)} lb`
+    : "—";
+}
+
+function StatCard({ label, value, delta, deltaLabel, Icon }) {
+  const isPositive = delta >= 0;
+  const DeltaIcon = isPositive ? TrendingUp : TrendingDown;
+
+  return (
+    <article className="progress-stat-card">
+      <div className="progress-stat-card__header">
+        <span>{label}</span>
+        <Icon size={18} />
+      </div>
+
+      <strong>{value}</strong>
+
+      <span
+        className={`progress-stat-card__delta ${
+          isPositive
+            ? "progress-stat-card__delta--positive"
+            : "progress-stat-card__delta--negative"
+        }`}
+      >
+        <DeltaIcon size={13} />
+        {deltaLabel}
+      </span>
+    </article>
+  );
+}
+
+function VolumeTrendChart({ data }) {
+  return (
+    <ResponsiveContainer width="100%" height="100%">
+      <LineChart
+        data={data}
+        margin={{ top: 12, right: 12, bottom: 0, left: -18 }}
+      >
+        <XAxis
+          axisLine={false}
+          dataKey="week"
+          fontSize={11}
+          stroke="rgba(151, 161, 179, 0.85)"
+          tickLine={false}
+        />
+        <YAxis
+          axisLine={false}
+          fontSize={11}
+          stroke="rgba(151, 161, 179, 0.85)"
+          tickFormatter={(value) => `${Math.round(value / 1000)}k`}
+          tickLine={false}
+        />
+        <Tooltip
+          contentStyle={{
+            background: "#101419",
+            border: "1px solid #2a323d",
+            borderRadius: 10,
+            color: "#f7f8fb",
+            fontSize: 12,
+          }}
+          formatter={(value) => [
+            `${formatNumber(value)} lb`,
+            "Volume",
+          ]}
+          labelStyle={{ color: "#f7f8fb" }}
+        />
+        <Line
+          dataKey="volume"
+          dot={{ r: 4, fill: "#b7f34a" }}
+          stroke="#b7f34a"
+          strokeLinecap="round"
+          strokeWidth={3}
+          type="monotone"
+        />
+      </LineChart>
+    </ResponsiveContainer>
+  );
 }
 
 function getExerciseTrends(sessions) {
@@ -441,6 +598,10 @@ function Progress() {
         currentWeek.totalVolume,
         previousWeek.totalVolume,
       ),
+      sessionChange:
+        currentWeek.sessions - previousWeek.sessions,
+      setChange: currentWeek.totalSets - previousWeek.totalSets,
+      weeklyVolumeTrend: getWeeklyVolumeTrend(sessions),
       exerciseTrends: getExerciseTrends(sessions),
       recentSessions: sessions.slice(0, 5),
     };
@@ -578,122 +739,71 @@ function Progress() {
       {user && sessions.length > 0 ? (
         <>
           <section className="progress-summary-grid">
-            <article className="progress-card progress-card--accent">
-              <div className="progress-card__header">
-                <span>This week external volume</span>
-                <BarChart3 size={20} />
-              </div>
+            <StatCard
+              delta={analytics.volumePercentChange}
+              deltaLabel={`${formatPercent(
+                analytics.volumePercentChange,
+              )} vs last week`}
+              Icon={BarChart3}
+              label="This week volume"
+              value={`${formatNumber(
+                analytics.currentWeek.totalVolume,
+              )} lb`}
+            />
 
-              <strong>
-                {formatNumber(
-                  analytics.currentWeek.totalVolume,
-                )}{" "}
-                lb
-              </strong>
+            <StatCard
+              delta={analytics.sessionChange}
+              deltaLabel={`${
+                analytics.sessionChange >= 0 ? "+" : ""
+              }${analytics.sessionChange} vs last week`}
+              Icon={CalendarDays}
+              label="Sessions"
+              value={analytics.currentWeek.sessions}
+            />
 
-              <p>
-                {formatPercent(
-                  analytics.volumePercentChange,
-                )}{" "}
-                vs last week
-              </p>
-            </article>
+            <StatCard
+              delta={analytics.setChange}
+              deltaLabel={`${
+                analytics.setChange >= 0 ? "+" : ""
+              }${analytics.setChange} vs last week`}
+              Icon={Dumbbell}
+              label="Sets logged"
+              value={analytics.currentWeek.totalSets}
+            />
 
-            <article className="progress-card">
-              <div className="progress-card__header">
-                <span>Sessions completed</span>
-                <CalendarDays size={20} />
-              </div>
-
-              <strong>
-                {analytics.currentWeek.sessions}
-              </strong>
-
-              <p>
-                {analytics.previousWeek.sessions} last week
-              </p>
-            </article>
-
-            <article className="progress-card">
-              <div className="progress-card__header">
-                <span>Sets logged</span>
-                <Dumbbell size={20} />
-              </div>
-
-              <strong>{analytics.currentWeek.totalSets}</strong>
-
-              <p>
-                {analytics.previousWeek.totalSets} last week
-              </p>
-            </article>
-
-            <article className="progress-card">
-              <div className="progress-card__header">
-                <span>Best set this week</span>
-                <Trophy size={20} />
-              </div>
-
-              <strong>
-                {analytics.currentWeek.bestSet.volume > 0
+            <StatCard
+              delta={analytics.currentWeek.bestSet.volume > 0 ? 1 : 0}
+              deltaLabel={
+                analytics.currentWeek.bestSet.exerciseName ||
+                "Log a weighted set"
+              }
+              Icon={Trophy}
+              label="Best set"
+              value={
+                analytics.currentWeek.bestSet.volume > 0
                   ? analytics.currentWeek.bestSet.label
-                  : "Not yet"}
-              </strong>
-
-              <p>
-                {analytics.currentWeek.bestSet.exerciseName ||
-                  "Log a weighted set"}
-              </p>
-            </article>
+                  : "Not yet"
+              }
+            />
           </section>
 
           <section className="progress-panel">
             <div className="progress-panel__heading">
               <div>
-                <h2>External volume this week vs last week</h2>
+                <h2>Weekly volume trend</h2>
                 <p>
-                  {getWeekRangeLabel(
-                    analytics.currentWeekKey,
-                  )}{" "}
-                  compared with{" "}
-                  {getWeekRangeLabel(
-                    analytics.previousWeekKey,
-                  )}
+                  Last {TREND_WEEKS} weeks of saved external
+                  training volume.
                 </p>
               </div>
 
-              <span
-                className={`progress-delta ${
-                  analytics.volumeChange >= 0
-                    ? "progress-delta--positive"
-                    : "progress-delta--negative"
-                }`}
-              >
-                <ArrowUpRight size={16} />
-                {analytics.volumeChange >= 0 ? "+" : ""}
-                {formatNumber(analytics.volumeChange)} lb
+              <span className="progress-panel__range">
+                {getWeekRangeLabel(analytics.currentWeekKey)}
               </span>
             </div>
 
-            <div className="progress-comparison">
-              <div>
-                <span>Current week</span>
-                <strong>
-                  {formatNumber(
-                    analytics.currentWeek.totalVolume,
-                  )}{" "}
-                  lb
-                </strong>
-              </div>
-
-              <div>
-                <span>Previous week</span>
-                <strong>
-                  {formatNumber(
-                    analytics.previousWeek.totalVolume,
-                  )}{" "}
-                  lb
-                </strong>
-              </div>
+            <div className="progress-volume-chart">
+              <VolumeTrendChart data={analytics.weeklyVolumeTrend} />
             </div>
           </section>
 
@@ -712,18 +822,30 @@ function Progress() {
               <div className="progress-trend-list">
                 {analytics.exerciseTrends.map((exercise) => (
                   <article
-                    className="progress-trend"
+                    className={`progress-trend ${
+                      getTrendChange(exercise).isPositive
+                        ? "progress-trend--positive"
+                        : ""
+                    }`}
                     key={exercise.exerciseId}
                   >
-                    <div>
-                      <strong>{exercise.exerciseName}</strong>
-                      <span>
-                        Last trained{" "}
-                        {formatDate(exercise.latest.date)}
-                      </span>
+                    <div className="progress-trend__identity">
+                      {getTrendChange(exercise).isPositive ? (
+                        <span className="progress-trend__pr">
+                          <Trophy size={14} />
+                        </span>
+                      ) : null}
+
+                      <div>
+                        <strong>{exercise.exerciseName}</strong>
+                        <span>
+                          Last trained{" "}
+                          {formatDate(exercise.latest.date)}
+                        </span>
+                      </div>
                     </div>
 
-                    <div>
+                    <div className="progress-trend__metric">
                       <span>
                         {getTrendMetricLabel(exercise.latest)}
                       </span>
@@ -732,7 +854,7 @@ function Progress() {
                       </strong>
                     </div>
 
-                    <div>
+                    <div className="progress-trend__metric">
                       <span>Change</span>
                       {(() => {
                         const change = getTrendChange(exercise);
@@ -751,18 +873,10 @@ function Progress() {
                       })()}
                     </div>
 
-                    <div>
-                      <span>
-                        {exercise.latest.metricType === "assistance"
-                          ? "Lower is better"
-                          : "Best weight"}
-                      </span>
+                    <div className="progress-trend__metric">
+                      <span>{getTrendBestLabel(exercise)}</span>
                       <strong>
-                        {exercise.latest.metricType === "assistance"
-                          ? "Assisted"
-                          : `${formatNumber(
-                              exercise.latest.bestWeight,
-                            )} lb`}
+                        {getTrendBestValue(exercise)}
                       </strong>
                     </div>
                   </article>
@@ -789,7 +903,8 @@ function Progress() {
 
             <div className="progress-session-list">
               {analytics.recentSessions.map((session) => (
-                <div
+                <button
+                  type="button"
                   className="progress-session"
                   key={session.id}
                 >
@@ -801,13 +916,11 @@ function Progress() {
                   <div>
                     <span>
                       {formatNumber(getSessionVolume(session))}{" "}
-                      lb external volume
+                      lb · {getCompletedSetCount(session)} sets
                     </span>
-                    <span>
-                      {getCompletedSetCount(session)} sets
-                    </span>
+                    <ChevronRight size={16} />
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </section>
