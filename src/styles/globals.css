@@ -1736,7 +1736,9 @@ a {
   }
 
   .topbar {
-    justify-content: space-between;
+    display: grid;
+    grid-template-columns: 48px minmax(0, 1fr) 48px;
+    justify-content: stretch;
     padding: 0 18px;
   }
 
@@ -1745,9 +1747,18 @@ a {
     display: grid;
   }
 
+  .topbar__menu {
+    margin-right: 0;
+  }
+
   .topbar__title {
+    justify-items: center;
     font-size: 0.95rem;
     font-weight: 700;
+  }
+
+  .topbar-notifications {
+    justify-self: end;
   }
 
   .app-content {
