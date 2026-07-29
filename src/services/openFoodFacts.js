@@ -59,6 +59,7 @@ function mapProduct(product = {}) {
     name,
     brand: product.brands?.split(",")[0]?.trim() ?? "",
     servingSize: product.serving_size ?? "",
+    source: "Open Food Facts",
     calories: getCalories(nutriments),
     protein: normalizeNumber(nutriments.proteins_100g),
     carbs: normalizeNumber(nutriments.carbohydrates_100g),
@@ -68,7 +69,10 @@ function mapProduct(product = {}) {
   };
 }
 
-export async function searchFoodProducts(query, { signal } = {}) {
+export async function searchOpenFoodFactsProducts(
+  query,
+  { signal } = {},
+) {
   const searchTerm = query.trim().toLowerCase();
 
   if (searchTerm.length < 2) {

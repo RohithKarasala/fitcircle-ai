@@ -30,7 +30,7 @@ import {
   getTodayKey,
   saveNutritionTargets,
 } from "../services/nutrition";
-import { searchFoodProducts } from "../services/openFoodFacts";
+import { searchFoodProducts } from "../services/foodSearch";
 
 const nutritionMetrics = [
   {
@@ -581,9 +581,9 @@ function Nutrition() {
                   <Search size={14} />
                   <span>
                     {isFoodSearchLoading
-                      ? "Searching Open Food Facts..."
+                      ? "Searching food databases..."
                       : foodSearchStatus ||
-                        "Search can autofill per 100g."}
+                        "Search can autofill per 100g from food databases."}
                   </span>
                 </div>
 
@@ -592,14 +592,25 @@ function Nutrition() {
                     {foodSuggestions.map((product) => (
                       <button
                         type="button"
-                        key={product.id}
+                        key={`${product.source}-${product.id}`}
                         onClick={() => applyFoodSuggestion(product)}
                       >
                         <span>
                           <strong>{product.name}</strong>
-                          {product.brand && (
-                            <small>{product.brand}</small>
+                          {(product.brand ||
+                            product.servingSize) && (
+                            <small>
+                              {[
+                                product.brand,
+                                product.servingSize,
+                              ]
+                                .filter(Boolean)
+                                .join(" · ")}
+                            </small>
                           )}
+                          <small className="nutrition-food-suggestions__source">
+                            {product.source}
+                          </small>
                         </span>
 
                         <small>

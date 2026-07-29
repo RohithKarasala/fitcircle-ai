@@ -1125,6 +1125,19 @@ a {
   font-weight: 700;
 }
 
+.nutrition-food-suggestions__source {
+  width: fit-content;
+  margin-top: 4px;
+  padding: 2px 6px;
+  color: var(--primary-soft);
+  background: rgb(183 243 74 / 10%);
+  border: 1px solid rgb(183 243 74 / 18%);
+  border-radius: 999px;
+  font-size: 0.62rem;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
 .nutrition-entry-empty {
   display: grid;
   gap: 6px;
