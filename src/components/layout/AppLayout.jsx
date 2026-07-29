@@ -39,6 +39,8 @@ function AppLayout() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] =
+    useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] =
     useState(false);
   const [lastSeenActivityAt, setLastSeenActivityAt] = useState(
@@ -101,13 +103,20 @@ function AppLayout() {
   }
 
   return (
-    <div className="app-shell">
+    <div
+      className={`app-shell ${
+        isSidebarCollapsed ? "app-shell--sidebar-collapsed" : ""
+      }`}
+    >
       <div
         className={`sidebar-wrapper ${
           isSidebarOpen ? "sidebar-wrapper--open" : ""
         }`}
       >
-        <Sidebar onNavigate={closeSidebar} />
+        <Sidebar
+          collapsed={isSidebarCollapsed}
+          onNavigate={closeSidebar}
+        />
       </div>
 
       {isSidebarOpen && (
@@ -124,8 +133,20 @@ function AppLayout() {
           <button
             className="icon-button topbar__menu"
             type="button"
-            aria-label="Open navigation"
-            onClick={() => setIsSidebarOpen(true)}
+            aria-label={
+              isSidebarCollapsed
+                ? "Expand navigation"
+                : "Collapse navigation"
+            }
+            aria-expanded={!isSidebarCollapsed}
+            onClick={() => {
+              if (window.matchMedia("(max-width: 900px)").matches) {
+                setIsSidebarOpen(true);
+                return;
+              }
+
+              setIsSidebarCollapsed((current) => !current);
+            }}
           >
             <Menu size={21} />
           </button>

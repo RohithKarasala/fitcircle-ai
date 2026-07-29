@@ -1582,14 +1582,16 @@ function Workout() {
         </div>
 
         <div className="workout-actions">
-          <button
-            type="button"
-            className="secondary-button"
-            onClick={clearWorkoutDraft}
-          >
-            <RotateCcw size={17} />
-            Clear draft
-          </button>
+          {!selectedDayFinished && (
+            <button
+              type="button"
+              className="secondary-button"
+              onClick={clearWorkoutDraft}
+            >
+              <RotateCcw size={17} />
+              Clear draft
+            </button>
+          )}
 
           <button
             type="button"

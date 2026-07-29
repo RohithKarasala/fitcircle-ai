@@ -55,13 +55,19 @@ a {
 
 .app-shell {
   min-height: 100vh;
+  --sidebar-width: 256px;
+}
+
+.app-shell--sidebar-collapsed {
+  --sidebar-width: 82px;
 }
 
 .sidebar-wrapper {
   position: fixed;
   inset: 0 auto 0 0;
   z-index: 40;
-  width: 256px;
+  width: var(--sidebar-width);
+  transition: width 180ms ease;
 }
 
 .sidebar {
@@ -74,11 +80,21 @@ a {
   border-right: 1px solid var(--border);
 }
 
+.sidebar--collapsed {
+  align-items: center;
+  padding-inline: 12px;
+}
+
 .sidebar__brand {
   display: flex;
   align-items: center;
   gap: 12px;
   padding: 4px 8px 28px;
+}
+
+.sidebar--collapsed .sidebar__brand {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .sidebar__logo {
@@ -106,11 +122,20 @@ a {
   font-size: 0.74rem;
 }
 
+.sidebar--collapsed .sidebar__brand-copy,
+.sidebar--collapsed .sidebar__link span,
+.sidebar--collapsed .sidebar__profile-copy,
+.sidebar--collapsed .sidebar__auth-button,
+.sidebar--collapsed .sidebar__google-button {
+  display: none;
+}
+
 .sidebar__nav {
   display: flex;
   flex: 1;
   flex-direction: column;
   gap: 5px;
+  width: 100%;
 }
 
 .sidebar__link {
@@ -126,6 +151,12 @@ a {
   transition:
     color 150ms ease,
     background 150ms ease;
+}
+
+.sidebar--collapsed .sidebar__link {
+  justify-content: center;
+  gap: 0;
+  padding-inline: 0;
 }
 
 .sidebar__link:hover {
@@ -146,8 +177,14 @@ a {
   display: flex;
   align-items: center;
   gap: 11px;
+  width: 100%;
   padding: 14px 10px 2px;
   border-top: 1px solid var(--border);
+}
+
+.sidebar--collapsed .sidebar__profile {
+  justify-content: center;
+  padding-inline: 0;
 }
 
 .sidebar__avatar {
@@ -178,7 +215,8 @@ a {
 
 .app-main {
   min-height: 100vh;
-  margin-left: 256px;
+  margin-left: var(--sidebar-width);
+  transition: margin-left 180ms ease;
 }
 
 .topbar {
@@ -198,6 +236,11 @@ a {
 .topbar__menu,
 .topbar__title {
   display: none;
+}
+
+.topbar__menu {
+  display: grid;
+  margin-right: auto;
 }
 
 .icon-button {
@@ -1636,10 +1679,43 @@ a {
 }
 
 @media (max-width: 900px) {
+  .app-shell,
+  .app-shell--sidebar-collapsed {
+    --sidebar-width: 250px;
+  }
+
   .sidebar-wrapper {
-    width: 250px;
     transform: translateX(-100%);
     transition: transform 180ms ease;
+  }
+
+  .sidebar--collapsed {
+    align-items: stretch;
+    padding: 22px 16px;
+  }
+
+  .sidebar--collapsed .sidebar__brand {
+    justify-content: flex-start;
+    padding: 4px 8px 28px;
+  }
+
+  .sidebar--collapsed .sidebar__brand-copy,
+  .sidebar--collapsed .sidebar__link span,
+  .sidebar--collapsed .sidebar__profile-copy,
+  .sidebar--collapsed .sidebar__auth-button,
+  .sidebar--collapsed .sidebar__google-button {
+    display: revert;
+  }
+
+  .sidebar--collapsed .sidebar__link {
+    justify-content: flex-start;
+    gap: 12px;
+    padding-inline: 13px;
+  }
+
+  .sidebar--collapsed .sidebar__profile {
+    justify-content: flex-start;
+    padding-inline: 10px;
   }
 
   .sidebar-wrapper--open {

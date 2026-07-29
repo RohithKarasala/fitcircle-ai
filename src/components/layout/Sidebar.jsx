@@ -10,6 +10,7 @@ import {
   Users,
   Utensils,
 } from "lucide-react";
+import PropTypes from "prop-types";
 import { NavLink } from "react-router-dom";
 
 import { useAuth } from "../../context/useAuth";
@@ -52,7 +53,7 @@ const navigation = [
   },
 ];
 
-function Sidebar({ onNavigate }) {
+function Sidebar({ collapsed = false, onNavigate }) {
   const {
     user,
     isLoading,
@@ -98,13 +99,17 @@ function Sidebar({ onNavigate }) {
   };
 
   return (
-    <aside className="sidebar">
+    <aside
+      className={`sidebar ${
+        collapsed ? "sidebar--collapsed" : ""
+      }`}
+    >
       <div className="sidebar__brand">
         <div className="sidebar__logo">
           <Activity size={22} />
         </div>
 
-        <div>
+        <div className="sidebar__brand-copy">
           <strong>FitCircle</strong>
           <span>Powered by AI</span>
         </div>
@@ -120,6 +125,7 @@ function Sidebar({ onNavigate }) {
             to={path}
             end={path === "/"}
             onClick={onNavigate}
+            title={collapsed ? label : undefined}
             className={({ isActive }) =>
               `sidebar__link ${
                 isActive ? "sidebar__link--active" : ""
@@ -183,3 +189,8 @@ function Sidebar({ onNavigate }) {
 }
 
 export default Sidebar;
+
+Sidebar.propTypes = {
+  collapsed: PropTypes.bool,
+  onNavigate: PropTypes.func,
+};
