@@ -11,6 +11,7 @@ import {
   Pizza,
   Plus,
   Save,
+  Search,
   Trash2,
   User,
 } from "lucide-react";
@@ -29,6 +30,7 @@ import {
   getTodayKey,
   saveNutritionTargets,
 } from "../services/nutrition";
+import { searchFoodProducts } from "../services/openFoodFacts";
 
 const nutritionMetrics = [
   {
@@ -170,6 +172,10 @@ function Nutrition() {
   const [isSavingTargets, setIsSavingTargets] =
     useState(false);
   const [isAddingEntry, setIsAddingEntry] = useState(false);
+  const [foodSuggestions, setFoodSuggestions] = useState([]);
+  const [isFoodSearchLoading, setIsFoodSearchLoading] =
+    useState(false);
+  const [foodSearchStatus, setFoodSearchStatus] = useState("");
   const [deletingEntryId, setDeletingEntryId] = useState("");
   const [notice, setNotice] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
@@ -220,6 +226,49 @@ function Nutrition() {
       isCurrent = false;
     };
   }, [date, user]);
+
+  useEffect(() => {
+    const query = newEntry.name.trim();
+
+    if (query.length < 2) {
+      return undefined;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(async () => {
+      setIsFoodSearchLoading(true);
+      setFoodSearchStatus("");
+
+      try {
+        const products = await searchFoodProducts(query, {
+          signal: controller.signal,
+        });
+
+        setFoodSuggestions(products);
+        setFoodSearchStatus(
+          products.length === 0
+            ? "No matches found. Manual entry is ready."
+            : "",
+        );
+      } catch (error) {
+        if (error.name !== "AbortError") {
+          setFoodSuggestions([]);
+          setFoodSearchStatus(
+            "Food search is unavailable. Manual entry is ready.",
+          );
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsFoodSearchLoading(false);
+        }
+      }
+    }, 350);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [newEntry.name]);
 
   async function handleSignIn() {
     try {
@@ -304,10 +353,39 @@ function Nutrition() {
   }
 
   function updateNewEntry(key, value) {
+    if (key === "name" && !value.trim()) {
+      setFoodSuggestions([]);
+      setFoodSearchStatus("");
+      setIsFoodSearchLoading(false);
+      setNewEntry(emptyNutritionEntry);
+      return;
+    }
+
+    if (key === "name" && value.trim().length < 2) {
+      setFoodSuggestions([]);
+      setFoodSearchStatus("");
+      setIsFoodSearchLoading(false);
+    }
+
     setNewEntry((current) => ({
       ...current,
       [key]: value,
     }));
+  }
+
+  function applyFoodSuggestion(product) {
+    setNewEntry((current) => ({
+      ...current,
+      name: product.name,
+      calories: product.calories,
+      protein: product.protein,
+      carbs: product.carbs,
+      fat: product.fat,
+      fiber: product.fiber,
+      water: current.water,
+    }));
+    setFoodSuggestions([]);
+    setFoodSearchStatus("Autofilled per 100g. Adjust if needed.");
   }
 
   function updateDate(nextDate) {
@@ -486,16 +564,53 @@ function Nutrition() {
               className="nutrition-entry-form"
               onSubmit={handleAddEntry}
             >
-              <Input
-                label="Food"
-                value={newEntry.name}
-                maxLength={120}
-                disabled={isNutritionLoading}
-                placeholder="Protein shake"
-                onChange={(event) =>
-                  updateNewEntry("name", event.target.value)
-                }
-              />
+              <div className="nutrition-food-search">
+                <Input
+                  label="Food"
+                  value={newEntry.name}
+                  maxLength={120}
+                  disabled={isNutritionLoading}
+                  placeholder="Search food or type manually"
+                  autoComplete="off"
+                  onChange={(event) =>
+                    updateNewEntry("name", event.target.value)
+                  }
+                />
+
+                <div className="nutrition-food-search__meta">
+                  <Search size={14} />
+                  <span>
+                    {isFoodSearchLoading
+                      ? "Searching Open Food Facts..."
+                      : foodSearchStatus ||
+                        "Search can autofill per 100g."}
+                  </span>
+                </div>
+
+                {foodSuggestions.length > 0 && (
+                  <div className="nutrition-food-suggestions">
+                    {foodSuggestions.map((product) => (
+                      <button
+                        type="button"
+                        key={product.id}
+                        onClick={() => applyFoodSuggestion(product)}
+                      >
+                        <span>
+                          <strong>{product.name}</strong>
+                          {product.brand && (
+                            <small>{product.brand}</small>
+                          )}
+                        </span>
+
+                        <small>
+                          {product.calories || "—"} cal ·{" "}
+                          {product.protein || "—"}g protein
+                        </small>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {nutritionMetrics.map(({ key, label, unit }) => (
                 <Input
