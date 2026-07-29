@@ -603,6 +603,10 @@ a {
   gap: 14px;
 }
 
+.progress-page__export {
+  align-self: flex-start;
+}
+
 .progress-card {
   min-width: 0;
   padding: 20px;
@@ -2733,6 +2737,10 @@ a {
 
   .progress-panel {
     padding: 18px;
+  }
+
+  .progress-page__export {
+    width: 100%;
   }
 
   .progress-panel__heading,

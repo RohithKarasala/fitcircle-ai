@@ -4,6 +4,7 @@ import {
   BarChart3,
   CalendarDays,
   Cloud,
+  Download,
   Dumbbell,
   LoaderCircle,
   LogIn,
@@ -163,6 +164,29 @@ function formatPercent(value) {
   }
 
   return `${rounded}%`;
+}
+
+function getExportDateKey(value = new Date()) {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, "0");
+  const day = String(value.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+function downloadJsonFile({ fileName, data }) {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  URL.revokeObjectURL(url);
 }
 
 function getTrendMetricLabel(session) {
@@ -431,6 +455,51 @@ function Progress() {
     }
   }
 
+  function handleDownloadWorkoutData() {
+    const exportedAt = new Date();
+
+    downloadJsonFile({
+      fileName: `fitcircle-workout-data-${getExportDateKey(
+        exportedAt,
+      )}.json`,
+      data: {
+        exportedAt: exportedAt.toISOString(),
+        source: "FitCircle",
+        formatVersion: 1,
+        sessionCount: sessions.length,
+        analytics: {
+          currentWeek: {
+            weekStart: analytics.currentWeekKey,
+            weekRange: getWeekRangeLabel(
+              analytics.currentWeekKey,
+            ),
+            totalVolume:
+              analytics.currentWeek.totalVolume,
+            totalSets: analytics.currentWeek.totalSets,
+            sessions: analytics.currentWeek.sessions,
+            bestSet: analytics.currentWeek.bestSet,
+          },
+          previousWeek: {
+            weekStart: analytics.previousWeekKey,
+            weekRange: getWeekRangeLabel(
+              analytics.previousWeekKey,
+            ),
+            totalVolume:
+              analytics.previousWeek.totalVolume,
+            totalSets: analytics.previousWeek.totalSets,
+            sessions: analytics.previousWeek.sessions,
+            bestSet: analytics.previousWeek.bestSet,
+          },
+          volumeChange: analytics.volumeChange,
+          volumePercentChange:
+            analytics.volumePercentChange,
+          exerciseTrends: analytics.exerciseTrends,
+        },
+        sessions,
+      },
+    });
+  }
+
   return (
     <div className="page progress-page">
       <section className="page-heading">
@@ -442,6 +511,18 @@ function Progress() {
             training history.
           </p>
         </div>
+
+        {user && (
+          <button
+            type="button"
+            className="secondary-button progress-page__export"
+            disabled={isLoadingHistory || sessions.length === 0}
+            onClick={handleDownloadWorkoutData}
+          >
+            <Download size={17} />
+            Download data
+          </button>
+        )}
       </section>
 
       {!isLoading && !user ? (
