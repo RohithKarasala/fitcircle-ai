@@ -13,8 +13,8 @@ import {
   getResistanceTypeLabel,
   getWeightFieldLabel,
   isBodyweightResistance,
-  isWorkoutSetComplete,
   isWorkoutSetLogged,
+  isWorkoutSetReadyForAutoCollapse,
   normalizeResistanceType,
   resistanceTypes,
 } from "../../utils/workoutMetrics";
@@ -34,6 +34,17 @@ function createSet(setNumber, resistanceType, exerciseNote = "") {
 
 function hasSetEnteredValues(set = {}) {
   return isWorkoutSetLogged(set) || set.rir !== "";
+}
+
+function areSetsReadyForAutoCollapse(sets = []) {
+  return (
+    sets.length > 0 &&
+    sets.every((set) => isWorkoutSetReadyForAutoCollapse(set))
+  );
+}
+
+function hasTwoDigitRepEntry(value) {
+  return String(value ?? "").trim().length >= 2;
 }
 
 function getGuideSummaryParts(guide) {
@@ -71,6 +82,7 @@ function ExerciseCard({
   const [isExpanded, setIsExpanded] = useState(true);
   const [isResistanceOpen, setIsResistanceOpen] =
     useState(false);
+  const lastSetChangeRef = useRef(null);
   const guide = getExerciseGuide(exercise);
   const guideSummaryParts = guide
     ? getGuideSummaryParts(guide)
@@ -84,12 +96,17 @@ function ExerciseCard({
   const usesBodyweight =
     isBodyweightResistance(resistanceType);
   const exerciseNote = sets[0]?.exerciseNote ?? "";
-  const loggedSetCount = sets.filter(isWorkoutSetComplete).length;
-  const isComplete =
-    sets.length > 0 && loggedSetCount >= sets.length;
-  const wasCompleteRef = useRef(isComplete);
+  const loggedSetCount = sets.filter(
+    isWorkoutSetReadyForAutoCollapse,
+  ).length;
+  const isReadyForAutoCollapse =
+    areSetsReadyForAutoCollapse(sets);
+  const wasReadyForAutoCollapseRef = useRef(
+    isReadyForAutoCollapse,
+  );
   const nextSetNumber =
-    sets.find((set) => !isWorkoutSetComplete(set))?.setNumber ??
+    sets.find((set) => !isWorkoutSetReadyForAutoCollapse(set))
+      ?.setNumber ??
     sets.length;
   const stickyContextText =
     loggedSetCount >= sets.length
@@ -102,31 +119,53 @@ function ExerciseCard({
   );
 
   useEffect(() => {
+    let collapseTimeoutId;
+
     if (
       autoCollapseOnComplete &&
-      isComplete &&
-      !wasCompleteRef.current
+      isReadyForAutoCollapse &&
+      !wasReadyForAutoCollapseRef.current &&
+      lastSetChangeRef.current?.hasIntentionalReps
     ) {
-      setIsExpanded(false);
+      collapseTimeoutId = window.setTimeout(() => {
+        setIsExpanded(false);
+      }, 650);
     }
 
-    wasCompleteRef.current = isComplete;
-  }, [autoCollapseOnComplete, isComplete]);
+    wasReadyForAutoCollapseRef.current =
+      isReadyForAutoCollapse;
+
+    return () => {
+      window.clearTimeout(collapseTimeoutId);
+    };
+  }, [autoCollapseOnComplete, isReadyForAutoCollapse]);
 
   const updateSet = (setId, field, value) => {
     if (readOnly) {
       return;
     }
 
+    const updatedSets = sets.map((set) =>
+      set.id === setId
+        ? {
+            ...set,
+            [field]: value,
+          }
+        : set,
+    );
+    const updatedSet = updatedSets.find(
+      (set) => set.id === setId,
+    );
+
+    lastSetChangeRef.current = {
+      setId,
+      field,
+      hasIntentionalReps: hasTwoDigitRepEntry(updatedSet?.reps),
+    };
+
     onSetsChange(
-      sets.map((set) =>
-        set.id === setId
-          ? {
-              ...set,
-              [field]: value,
-            }
-          : set,
-      ),
+      updatedSets,
+      lastSetChangeRef.current,
     );
   };
 

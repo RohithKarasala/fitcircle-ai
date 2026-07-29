@@ -138,6 +138,30 @@ export function isWorkoutSetComplete(set = {}) {
   );
 }
 
+function hasIntentionalRepEntry(set = {}) {
+  const reps = String(set.reps ?? "").trim();
+
+  return (
+    (reps.length >= 2 || /^[3-9]/.test(reps)) &&
+    toWorkoutNumber(reps) > 0
+  );
+}
+
+export function isWorkoutSetReadyForAutoCollapse(set = {}) {
+  if (set.completed) {
+    return true;
+  }
+
+  if (isBodyweightResistance(set.resistanceType)) {
+    return hasIntentionalRepEntry(set);
+  }
+
+  return (
+    toWorkoutNumber(set.weight) > 0 &&
+    hasIntentionalRepEntry(set)
+  );
+}
+
 export function getSetExternalVolume(set = {}) {
   const resistanceType = normalizeResistanceType(
     set.resistanceType,

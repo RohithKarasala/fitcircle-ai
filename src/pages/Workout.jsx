@@ -49,6 +49,7 @@ import {
   getDefaultResistanceType,
   isWorkoutSetComplete,
   isWorkoutSetLogged,
+  isWorkoutSetReadyForAutoCollapse,
 } from "../utils/workoutMetrics";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
@@ -105,6 +106,13 @@ function createExerciseSets(exercise) {
 function areExerciseSetsComplete(sets = []) {
   return (
     sets.length > 0 && sets.every((set) => isWorkoutSetComplete(set))
+  );
+}
+
+function areExerciseSetsReadyForAutoCollapse(sets = []) {
+  return (
+    sets.length > 0 &&
+    sets.every((set) => isWorkoutSetReadyForAutoCollapse(set))
   );
 }
 
@@ -1013,10 +1021,13 @@ function Workout() {
     selectedDayFinished && finishedWorkoutSets
       ? finishedWorkoutSets
       : workoutSets;
+  const liveSetCompletionFilter = selectedDayFinished
+    ? isWorkoutSetComplete
+    : isWorkoutSetReadyForAutoCollapse;
 
   const completedSets = Object.values(displayWorkoutSets)
     .flat()
-    .filter(isWorkoutSetComplete).length;
+    .filter(liveSetCompletionFilter).length;
 
   const totalSets =
     Object.values(displayWorkoutSets).flat().length;
@@ -1045,38 +1056,10 @@ function Workout() {
   };
 
   const updateExerciseSets = (exerciseId, sets) => {
-    const wasComplete = areExerciseSetsComplete(
-      workoutSets[exerciseId],
-    );
-    const isComplete = areExerciseSetsComplete(sets);
-    const nextWorkoutSets = {
-      ...workoutSets,
+    setWorkoutSets((current) => ({
+      ...current,
       [exerciseId]: sets,
-    };
-
-    setWorkoutSets(nextWorkoutSets);
-
-    if (!wasComplete && isComplete) {
-      const currentExerciseIndex =
-        workout.exercises.findIndex(
-          (exercise) => exercise.id === exerciseId,
-        );
-      const orderedExercises = [
-        ...workout.exercises.slice(currentExerciseIndex + 1),
-        ...workout.exercises.slice(0, currentExerciseIndex),
-      ];
-      const nextExercise = orderedExercises.find((exercise) => {
-        const nextSets =
-          nextWorkoutSets[exercise.id] ??
-          createExerciseSets(exercise);
-
-        return !areExerciseSetsComplete(nextSets);
-      });
-
-      if (nextExercise) {
-        setActiveExerciseId(nextExercise.id);
-      }
-    }
+    }));
   };
 
   const closeExerciseEditor = () => {
@@ -1431,7 +1414,9 @@ function Workout() {
   const isExerciseComplete = (exercise) => {
     const sets = displayWorkoutSets[exercise.id] ?? [];
 
-    return areExerciseSetsComplete(sets);
+    return selectedDayFinished
+      ? areExerciseSetsComplete(sets)
+      : areExerciseSetsReadyForAutoCollapse(sets);
   };
 
   const getExerciseNavMeta = (exercise) => {
