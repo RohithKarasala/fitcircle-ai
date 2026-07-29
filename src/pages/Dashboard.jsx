@@ -4,10 +4,13 @@ import {
   CheckCircle2,
   Dumbbell,
   LoaderCircle,
+  Nut,
   Pencil,
+  Pizza,
   Save,
   Scale,
   Salad,
+  Leaf,
   X,
 } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -101,11 +104,183 @@ function getNutritionTotals(entries) {
     (totals, entry) => ({
       calories: totals.calories + Number(entry.calories || 0),
       protein: totals.protein + Number(entry.protein || 0),
+      carbs: totals.carbs + Number(entry.carbs || 0),
+      fat: totals.fat + Number(entry.fat || 0),
+      fiber: totals.fiber + Number(entry.fiber || 0),
     }),
     {
       calories: 0,
       protein: 0,
+      carbs: 0,
+      fat: 0,
+      fiber: 0,
     },
+  );
+}
+
+const dashboardNutritionMetrics = [
+  {
+    key: "protein",
+    label: "Protein",
+    unit: "g",
+    Icon: Dumbbell,
+    color: "#8ea7ff",
+  },
+  {
+    key: "carbs",
+    label: "Carbs",
+    unit: "g",
+    Icon: Pizza,
+    color: "#f5c95b",
+  },
+  {
+    key: "fat",
+    label: "Fats",
+    unit: "g",
+    Icon: Nut,
+    color: "#ef6f61",
+  },
+  {
+    key: "fiber",
+    label: "Fiber",
+    unit: "g",
+    Icon: Leaf,
+    color: "#4fd3a6",
+  },
+];
+
+const macroCaloriesPerUnit = {
+  protein: 4,
+  carbs: 4,
+  fat: 9,
+  fiber: 2,
+};
+
+function formatNutritionAmount(value, unit = "") {
+  const number = Number(value || 0);
+
+  if (number % 1 === 0) {
+    return `${number}${unit}`;
+  }
+
+  return `${number.toFixed(1)}${unit}`;
+}
+
+function getNutritionProgress(current, target) {
+  const targetNumber = Number(target || 0);
+
+  if (targetNumber <= 0) {
+    return 0;
+  }
+
+  return Math.min(
+    100,
+    Math.round((Number(current || 0) / targetNumber) * 100),
+  );
+}
+
+function getMacroCalorieSegments(totals) {
+  return dashboardNutritionMetrics
+    .map(({ key, color }) => ({
+      key,
+      color,
+      calories:
+        Number(totals[key] || 0) *
+        (macroCaloriesPerUnit[key] ?? 0),
+    }))
+    .filter(({ calories }) => calories > 0);
+}
+
+function DashboardCalorieRing({ current, target, segments }) {
+  const targetNumber = Number(target || 0);
+  const currentNumber = Number(current || 0);
+  const remaining = Math.max(0, targetNumber - currentNumber);
+  const radius = 42;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+
+  return (
+    <div className="dashboard-nutrition-ring">
+      <svg viewBox="0 0 112 112" aria-hidden="true">
+        <circle
+          className="dashboard-nutrition-ring__track"
+          cx="56"
+          cy="56"
+          r={radius}
+        />
+        {targetNumber > 0 &&
+          segments.map((segment) => {
+            const available = Math.max(
+              0,
+              targetNumber - offset,
+            );
+            const calories = Math.min(
+              segment.calories,
+              available,
+            );
+            const length =
+              (calories / targetNumber) * circumference;
+            const dashOffset =
+              (-offset / targetNumber) * circumference;
+
+            offset += calories;
+
+            if (length <= 0) {
+              return null;
+            }
+
+            return (
+              <circle
+                className="dashboard-nutrition-ring__segment"
+                cx="56"
+                cy="56"
+                key={segment.key}
+                r={radius}
+                stroke={segment.color}
+                strokeDasharray={`${length} ${
+                  circumference - length
+                }`}
+                strokeDashoffset={dashOffset}
+              />
+            );
+          })}
+      </svg>
+
+      <div>
+        <strong>{Math.round(remaining)}</strong>
+        <span>cal left</span>
+      </div>
+    </div>
+  );
+}
+
+function DashboardMacroBar({ metric, totals, targets }) {
+  const { key, label, unit, Icon, color } = metric;
+  const current = totals[key];
+  const target = targets[key];
+  const progress = getNutritionProgress(current, target);
+
+  return (
+    <div className="dashboard-nutrition-macro">
+      <div>
+        <span style={{ "--metric-color": color }}>
+          <Icon size={13} />
+        </span>
+        <small>{label}</small>
+      </div>
+      <strong>
+        {formatNutritionAmount(current, unit)}
+        <span> / {formatNutritionAmount(target, unit)}</span>
+      </strong>
+      <div className="dashboard-nutrition-macro__track">
+        <span
+          style={{
+            width: `${progress}%`,
+            background: color,
+          }}
+        />
+      </div>
+    </div>
   );
 }
 
@@ -183,6 +358,9 @@ function Dashboard() {
         setNutritionTotals({
           calories: 0,
           protein: 0,
+          carbs: 0,
+          fat: 0,
+          fiber: 0,
         });
         setNutritionTargets(defaultNutritionTargets);
         return;
@@ -446,26 +624,45 @@ function Dashboard() {
           )}
         </article>
 
-        <article className="card stat-card">
-          <div className="stat-card__icon">
-            <Salad size={20} />
+        <article className="card dashboard-nutrition-card">
+          <div className="card__header">
+            <div>
+              <span className="card__label">
+                Today’s nutrition
+              </span>
+              <h2>Daily intake</h2>
+            </div>
+
+            <div className="card__icon">
+              <Salad size={20} />
+            </div>
           </div>
 
-          <span>Today’s nutrition</span>
-          <strong>
-            {Math.round(nutritionTotals.calories)} cal
-          </strong>
-          <small>
-            {Math.round(nutritionTotals.protein)}g protein ·{" "}
-            {Math.max(
-              0,
-              Math.round(
-                nutritionTargets.calories -
-                  nutritionTotals.calories,
-              ),
-            )}{" "}
-            cal left
-          </small>
+          <div className="dashboard-nutrition-summary">
+            <DashboardCalorieRing
+              current={nutritionTotals.calories}
+              target={nutritionTargets.calories}
+              segments={getMacroCalorieSegments(
+                nutritionTotals,
+              )}
+            />
+
+            <div className="dashboard-nutrition-macros">
+              {dashboardNutritionMetrics.map((metric) => (
+                <DashboardMacroBar
+                  key={metric.key}
+                  metric={metric}
+                  totals={nutritionTotals}
+                  targets={nutritionTargets}
+                />
+              ))}
+            </div>
+          </div>
+
+          <Link className="text-link" to="/nutrition">
+            Log food
+            <ArrowRight size={16} />
+          </Link>
         </article>
 
         <article className="card stat-card">
