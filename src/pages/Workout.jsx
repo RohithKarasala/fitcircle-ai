@@ -109,6 +109,8 @@ const exerciseNameAliases = {
     "lat-pulldown-or-assisted-pull-ups",
   ],
   "assisted-pull-up": ["pull-ups"],
+  "rear-delt-fly": ["reverse-pec-deck"],
+  "reverse-pec-deck": ["rear-delt-fly"],
 };
 
 function normalizeExerciseName(value = "") {

@@ -77,13 +77,13 @@ export const workoutProgram = {
       },
       {
         id: "reverse-pec-deck-monday",
-        name: "Reverse Pec Deck",
-        equipment: "Machine",
+        name: "Rear Delt Fly",
+        equipment: "Dumbbells, machine, or cable",
         sets: 3,
         repRange: "12–15",
         restSeconds: 60,
         description:
-          "Keep your chest against the pad and sweep your arms apart using your rear delts.",
+          "Move your arms out and back with control, keeping tension on your rear delts instead of shrugging into your traps.",
       },
     ],
   },
@@ -274,13 +274,13 @@ export const workoutProgram = {
       },
       {
         id: "reverse-pec-deck-thursday",
-        name: "Reverse Pec Deck",
-        equipment: "Machine",
+        name: "Rear Delt Fly",
+        equipment: "Dumbbells, machine, or cable",
         sets: 3,
         repRange: "12–15",
         restSeconds: 60,
         description:
-          "Keep your chest against the pad and focus on your rear delts rather than your traps.",
+          "Move your arms out and back with control, keeping tension on your rear delts instead of shrugging into your traps.",
       },
       {
         id: "shrugs-thursday",
