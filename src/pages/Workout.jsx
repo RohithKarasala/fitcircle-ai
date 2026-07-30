@@ -47,6 +47,7 @@ import {
 import {
   formatSetPerformance,
   getDefaultResistanceType,
+  getResistanceTypeLabel,
   isWorkoutSetComplete,
   isWorkoutSetLogged,
   isWorkoutSetReadyForAutoCollapse,
@@ -463,6 +464,97 @@ function getWorkoutSetsFromSession(session, workout) {
       return [exercise.id, savedExercise?.sets ?? []];
     }),
   );
+}
+
+function getExerciseFromCatalog(historyExercise) {
+  const normalizedName = normalizeExerciseName(
+    historyExercise.exerciseName,
+  );
+
+  return exerciseCatalog.find(
+    (exercise) =>
+      exercise.id === historyExercise.exerciseId ||
+      normalizeExerciseName(exercise.name) === normalizedName,
+  );
+}
+
+function getRepRangeFromSets(sets = []) {
+  const reps = sets
+    .map((set) => Number(set.reps))
+    .filter((value) => Number.isFinite(value) && value > 0);
+
+  if (reps.length === 0) {
+    return "8–12";
+  }
+
+  const minReps = Math.min(...reps);
+  const maxReps = Math.max(...reps);
+
+  return minReps === maxReps
+    ? String(minReps)
+    : `${minReps}–${maxReps}`;
+}
+
+function getSavedExerciseDefinition(
+  historyExercise,
+  fallbackWorkout,
+) {
+  const fallbackExercise = fallbackWorkout.exercises.find((exercise) =>
+    isMatchingHistoryExercise(exercise, historyExercise),
+  );
+  const catalogExercise = getExerciseFromCatalog(historyExercise);
+  const sourceExercise = fallbackExercise ?? catalogExercise;
+  const sets = historyExercise.sets ?? [];
+  const resistanceType =
+    sets[0]?.resistanceType ??
+    getDefaultResistanceType(sourceExercise ?? {
+      id: historyExercise.exerciseId,
+      name: historyExercise.exerciseName,
+    });
+
+  return {
+    id:
+      fallbackExercise?.id ??
+      historyExercise.exerciseId ??
+      normalizeExerciseName(historyExercise.exerciseName),
+    name:
+      historyExercise.exerciseName ??
+      sourceExercise?.name ??
+      "Saved exercise",
+    equipment:
+      sourceExercise?.equipment ??
+      getResistanceTypeLabel(resistanceType),
+    sets: sets.length || sourceExercise?.sets || 1,
+    repRange: sourceExercise?.repRange ?? getRepRangeFromSets(sets),
+    restSeconds: sourceExercise?.restSeconds ?? 60,
+    guideKey: sourceExercise?.guideKey,
+    description:
+      sourceExercise?.description ??
+      "Review the sets saved for this exercise.",
+    custom: !fallbackExercise,
+  };
+}
+
+function getWorkoutFromSession(session, fallbackWorkout) {
+  if (!session) {
+    return fallbackWorkout;
+  }
+
+  const savedExercises = (session.exercises ?? [])
+    .filter((exercise) => (exercise.sets ?? []).length > 0)
+    .map((exercise) =>
+      getSavedExerciseDefinition(exercise, fallbackWorkout),
+    );
+
+  if (savedExercises.length === 0) {
+    return fallbackWorkout;
+  }
+
+  return {
+    ...fallbackWorkout,
+    name: session.workoutName ?? fallbackWorkout.name,
+    exercises: savedExercises,
+  };
 }
 
 function getUniqueSessions(sessions = []) {
@@ -917,9 +1009,6 @@ function Workout() {
     defaultWorkoutSchedule[selectedDay];
   const baseWorkout = workoutProgram[selectedWorkoutKey];
   const workout = customWorkout ?? baseWorkout;
-  const isCompletionWorkout = workout.exercises.every(
-    (exercise) => exercise.trackingType === "completion",
-  );
   const selectedWeekDateKeys = useMemo(
     () => getWeekDateKeys(selectedDate),
     [selectedDate],
@@ -1203,14 +1292,21 @@ function Workout() {
     recentWorkoutSessions,
     selectedDate,
   );
+  const displayWorkout =
+    selectedDayFinished && selectedFinishedWorkout
+      ? getWorkoutFromSession(selectedFinishedWorkout, workout)
+      : workout;
   const finishedWorkoutSets = getWorkoutSetsFromSession(
     selectedFinishedWorkout,
-    workout,
+    displayWorkout,
   );
   const displayWorkoutSets =
     selectedDayFinished && finishedWorkoutSets
       ? finishedWorkoutSets
       : workoutSets;
+  const isCompletionWorkout = displayWorkout.exercises.every(
+    (exercise) => exercise.trackingType === "completion",
+  );
   const liveSetCompletionFilter = selectedDayFinished
     ? isWorkoutSetComplete
     : isWorkoutSetReadyForAutoCollapse;
@@ -1707,19 +1803,19 @@ function Workout() {
   };
 
   const activeExercise =
-    workout.exercises.find(
+    displayWorkout.exercises.find(
       (exercise) => exercise.id === activeExerciseId,
-    ) ?? workout.exercises[0];
+    ) ?? displayWorkout.exercises[0];
 
   return (
     <div className="page workout-page">
       <section className="page-heading workout-page__heading">
         <div>
           <p className="eyebrow">Training</p>
-          <h1>{workout.name}</h1>
+          <h1>{displayWorkout.name}</h1>
           <p>
-            {workout.focus} · Approximately{" "}
-            {workout.estimatedMinutes} minutes
+            {displayWorkout.focus} · Approximately{" "}
+            {displayWorkout.estimatedMinutes} minutes
           </p>
         </div>
 
@@ -1927,7 +2023,7 @@ function Workout() {
             </div>
 
             <div className="workout-exercise-nav__list">
-              {workout.exercises.map((exercise) => {
+              {displayWorkout.exercises.map((exercise) => {
                 const isActive =
                   exercise.id === activeExercise?.id;
                 const isComplete =
@@ -1988,9 +2084,9 @@ function Workout() {
           !isCompletionWorkout ? "exercise-list--mobile" : ""
         }`}
       >
-        {workout.exercises.map((exercise) => {
+        {displayWorkout.exercises.map((exercise) => {
           const completionSet =
-            workoutSets[exercise.id]?.[0];
+            displayWorkoutSets[exercise.id]?.[0];
 
           if (exercise.trackingType === "completion") {
             return (
