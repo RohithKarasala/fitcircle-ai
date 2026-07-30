@@ -43,10 +43,6 @@ function areSetsReadyForAutoCollapse(sets = []) {
   );
 }
 
-function hasTwoDigitRepEntry(value) {
-  return String(value ?? "").trim().length >= 2;
-}
-
 function getGuideSummaryParts(guide) {
   const seenParts = new Set();
 
@@ -83,6 +79,8 @@ function ExerciseCard({
   const [isResistanceOpen, setIsResistanceOpen] =
     useState(false);
   const lastSetChangeRef = useRef(null);
+  const pendingAutoCollapseRef = useRef(false);
+  const collapseTimeoutRef = useRef(null);
   const guide = getExerciseGuide(exercise);
   const guideSummaryParts = guide
     ? getGuideSummaryParts(guide)
@@ -119,26 +117,45 @@ function ExerciseCard({
   );
 
   useEffect(() => {
-    let collapseTimeoutId;
-
     if (
       autoCollapseOnComplete &&
       isReadyForAutoCollapse &&
       !wasReadyForAutoCollapseRef.current &&
       lastSetChangeRef.current?.hasIntentionalReps
     ) {
-      collapseTimeoutId = window.setTimeout(() => {
-        setIsExpanded(false);
-      }, 650);
+      pendingAutoCollapseRef.current = true;
+    }
+
+    if (!isReadyForAutoCollapse) {
+      pendingAutoCollapseRef.current = false;
+      window.clearTimeout(collapseTimeoutRef.current);
     }
 
     wasReadyForAutoCollapseRef.current =
       isReadyForAutoCollapse;
-
-    return () => {
-      window.clearTimeout(collapseTimeoutId);
-    };
   }, [autoCollapseOnComplete, isReadyForAutoCollapse]);
+
+  useEffect(
+    () => () => window.clearTimeout(collapseTimeoutRef.current),
+    [],
+  );
+
+  const commitAutoCollapse = () => {
+    if (
+      readOnly ||
+      !autoCollapseOnComplete ||
+      !pendingAutoCollapseRef.current
+    ) {
+      return;
+    }
+
+    window.clearTimeout(collapseTimeoutRef.current);
+
+    collapseTimeoutRef.current = window.setTimeout(() => {
+      pendingAutoCollapseRef.current = false;
+      setIsExpanded(false);
+    }, 950);
+  };
 
   const updateSet = (setId, field, value) => {
     if (readOnly) {
@@ -160,8 +177,17 @@ function ExerciseCard({
     lastSetChangeRef.current = {
       setId,
       field,
-      hasIntentionalReps: hasTwoDigitRepEntry(updatedSet?.reps),
+      hasIntentionalReps:
+        isWorkoutSetReadyForAutoCollapse(updatedSet),
     };
+
+    if (
+      autoCollapseOnComplete &&
+      field === "reps" &&
+      areSetsReadyForAutoCollapse(updatedSets)
+    ) {
+      pendingAutoCollapseRef.current = true;
+    }
 
     onSetsChange(
       updatedSets,
@@ -498,6 +524,13 @@ function ExerciseCard({
                     onChange={(event) =>
                       updateSet(set.id, "reps", event.target.value)
                     }
+                    onBlur={commitAutoCollapse}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.currentTarget.blur();
+                        commitAutoCollapse();
+                      }
+                    }}
                   />
                 </label>
 

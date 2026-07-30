@@ -50,6 +50,7 @@ import {
   isWorkoutSetComplete,
   isWorkoutSetLogged,
   isWorkoutSetReadyForAutoCollapse,
+  normalizeResistanceType,
 } from "../utils/workoutMetrics";
 
 const DRAFT_STORAGE_KEY = "fitcircle-workout-drafts";
@@ -456,12 +457,122 @@ function getWorkoutSetsFromSession(session, workout) {
   return Object.fromEntries(
     workout.exercises.map((exercise) => {
       const savedExercise = session.exercises.find(
-        (item) => item.exerciseId === exercise.id,
+        (item) => isMatchingHistoryExercise(exercise, item),
       );
 
       return [exercise.id, savedExercise?.sets ?? []];
     }),
   );
+}
+
+function getUniqueSessions(sessions = []) {
+  const sessionsById = new Map();
+
+  for (const session of sessions) {
+    if (!session?.id || sessionsById.has(session.id)) {
+      continue;
+    }
+
+    sessionsById.set(session.id, session);
+  }
+
+  return Array.from(sessionsById.values());
+}
+
+function findSessionByDate(sessions, dateKey) {
+  return getUniqueSessions(sessions).find(
+    (session) => getDateKey(session.date) === dateKey,
+  );
+}
+
+function getPreviousSetsForExercise(
+  exercise,
+  sessions,
+  selectedDate,
+) {
+  const setsByResistanceType = new Map();
+
+  for (const session of sessions) {
+    if (getDateKey(session.date) === selectedDate) {
+      continue;
+    }
+
+    for (const historyExercise of session.exercises ?? []) {
+      if (!isMatchingHistoryExercise(exercise, historyExercise)) {
+        continue;
+      }
+
+      const setsByTypeForExercise = new Map();
+
+      for (const set of historyExercise.sets ?? []) {
+        const resistanceType = normalizeResistanceType(
+          set.resistanceType,
+        );
+        const setsForType =
+          setsByTypeForExercise.get(resistanceType) ?? [];
+
+        setsForType.push(set);
+        setsByTypeForExercise.set(resistanceType, setsForType);
+      }
+
+      for (const [
+        resistanceType,
+        setsForType,
+      ] of setsByTypeForExercise) {
+        if (!setsByResistanceType.has(resistanceType)) {
+          setsByResistanceType.set(resistanceType, setsForType);
+        }
+      }
+    }
+  }
+
+  return Array.from(setsByResistanceType.values()).flat();
+}
+
+function createSessionFromWorkoutState({
+  sessionId,
+  workoutDate,
+  workoutDay,
+  workoutName,
+  workout,
+  workoutSets,
+}) {
+  return {
+    id: sessionId,
+    date: workoutDate ? `${workoutDate}T12:00:00` : new Date(),
+    day: workoutDay,
+    workoutName,
+    notes: "",
+    exercises: workout.exercises
+      .map((exercise) => {
+        const sets = (workoutSets[exercise.id] ?? [])
+          .filter(isWorkoutSetLogged)
+          .map((set) => {
+            const resistanceType =
+              set.resistanceType ??
+              getDefaultResistanceType(exercise);
+
+            return {
+              ...set,
+              weight: set.weight ?? "",
+              reps: set.reps ?? "",
+              rir: set.rir ?? "",
+              resistanceType,
+              exerciseId: exercise.id,
+              exerciseName: exercise.name,
+              exerciseNote: set.exerciseNote ?? "",
+            };
+          });
+
+        return {
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          exerciseNote: sets[0]?.exerciseNote ?? "",
+          sets,
+        };
+      })
+      .filter((exercise) => exercise.sets.length > 0),
+  };
 }
 
 function formatShortDate(dateKey) {
@@ -971,6 +1082,9 @@ function Workout() {
       );
 
       setRemoteDraftsByDate(draftMap);
+      setExerciseHistory((current) =>
+        getUniqueSessions([...current, ...sessions]),
+      );
       setFinishedDates(getFinishedDates(sessions));
       setHasLoadedRemoteDrafts(true);
 
@@ -1080,9 +1194,14 @@ function Workout() {
     () => history,
     [history],
   );
+  const recentWorkoutSessions = useMemo(
+    () => getUniqueSessions([...history, ...exerciseHistory]),
+    [exerciseHistory, history],
+  );
   const selectedDayFinished = finishedDates.has(selectedDate);
-  const selectedFinishedWorkout = previousWorkouts.find(
-    (session) => getDateKey(session.date) === selectedDate,
+  const selectedFinishedWorkout = findSessionByDate(
+    recentWorkoutSessions,
+    selectedDate,
   );
   const finishedWorkoutSets = getWorkoutSetsFromSession(
     selectedFinishedWorkout,
@@ -1335,6 +1454,15 @@ function Workout() {
         workout,
         workoutSets,
       });
+      const savedSessionForState =
+        createSessionFromWorkoutState({
+          sessionId: savedSession.id,
+          workoutDate: selectedDate,
+          workoutDay: selectedDay,
+          workoutName: workout.name,
+          workout,
+          workoutSets,
+        });
 
       const autoShareGroups = groups.filter(
         (group) => group.autoShareWorkouts,
@@ -1378,6 +1506,18 @@ function Workout() {
         nextDates.add(selectedDate);
         return nextDates;
       });
+      setHistory((current) => [
+        savedSessionForState,
+        ...current.filter(
+          (session) => session.id !== savedSession.id,
+        ),
+      ]);
+      setExerciseHistory((current) => [
+        savedSessionForState,
+        ...current.filter(
+          (session) => session.id !== savedSession.id,
+        ),
+      ]);
       setCustomWorkout(baseWorkout);
       setWorkoutSets(createWorkoutState(baseWorkout));
       setStatusMessage(
@@ -1522,9 +1662,11 @@ function Workout() {
     exercise,
     { autoCollapseOnComplete = false } = {},
   ) => {
-    const previousExercise = exerciseHistory
-      .flatMap((session) => session.exercises)
-      .find((item) => isMatchingHistoryExercise(exercise, item));
+    const previousSets = getPreviousSetsForExercise(
+      exercise,
+      recentWorkoutSessions,
+      selectedDate,
+    );
     const exerciseSets =
       selectedDayFinished &&
       displayWorkoutSets[exercise.id]?.length
@@ -1540,7 +1682,7 @@ function Workout() {
         previousSets={
           selectedDayFinished
             ? []
-            : previousExercise?.sets ?? []
+            : previousSets
         }
         showRir={trackRir}
         showGuide={showExerciseGuides}
