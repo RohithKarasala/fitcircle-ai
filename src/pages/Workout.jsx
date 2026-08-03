@@ -33,6 +33,7 @@ import {
 } from "../data/workoutProgram";
 import {
   deleteWorkoutDraft,
+  deleteWorkoutSession,
   ensureUserProfile,
   getUserWorkoutDrafts,
   getUserWorkoutHistory,
@@ -497,6 +498,32 @@ function getRepRangeFromSets(sets = []) {
     : `${minReps}–${maxReps}`;
 }
 
+function getCompletionWorkoutLabels(workout) {
+  const completionExercise = workout.exercises.find(
+    (exercise) => exercise.trackingType === "completion",
+  );
+  const completed =
+    completionExercise?.completionLabel ??
+    `${completionExercise?.name ?? "Workout"} completed`;
+  const incomplete =
+    completionExercise?.incompleteLabel ??
+    `${completionExercise?.name ?? "Workout"} not logged yet`;
+
+  return { completed, incomplete };
+}
+
+function getCompletionExerciseDefinition(historyExercise) {
+  return Object.values(workoutProgram)
+    .flatMap((workout) => workout.exercises)
+    .find(
+      (exercise) =>
+        exercise.trackingType === "completion" &&
+        (exercise.id === historyExercise.exerciseId ||
+          normalizeExerciseName(exercise.name) ===
+            normalizeExerciseName(historyExercise.exerciseName)),
+    );
+}
+
 function getSavedExerciseDefinition(
   historyExercise,
   fallbackWorkout,
@@ -504,6 +531,21 @@ function getSavedExerciseDefinition(
   const fallbackExercise = fallbackWorkout.exercises.find((exercise) =>
     isMatchingHistoryExercise(exercise, historyExercise),
   );
+  const completionExercise =
+    fallbackExercise?.trackingType === "completion"
+      ? fallbackExercise
+      : getCompletionExerciseDefinition(historyExercise);
+
+  if (completionExercise) {
+    return {
+      ...completionExercise,
+      sets:
+        historyExercise.sets?.length ||
+        completionExercise.sets ||
+        1,
+    };
+  }
+
   const catalogExercise = getExerciseFromCatalog(historyExercise);
   const sourceExercise = fallbackExercise ?? catalogExercise;
   const sets = historyExercise.sets ?? [];
@@ -1004,6 +1046,8 @@ function Workout() {
   );
   const [exerciseFormError, setExerciseFormError] =
     useState("");
+  const [isResetConfirmOpen, setIsResetConfirmOpen] =
+    useState(false);
   const appliedScheduleUserIdRef = useRef("");
 
   const selectedWorkoutKey =
@@ -1309,6 +1353,8 @@ function Workout() {
   const isCompletionWorkout = displayWorkout.exercises.every(
     (exercise) => exercise.trackingType === "completion",
   );
+  const completionWorkoutLabels =
+    getCompletionWorkoutLabels(displayWorkout);
   const liveSetCompletionFilter = selectedDayFinished
     ? isWorkoutSetComplete
     : isWorkoutSetReadyForAutoCollapse;
@@ -1339,6 +1385,7 @@ function Workout() {
         ? getWorkoutStateFromDraft(remoteDraft, nextWorkout)
         : getDraftForKey(dateKey, nextWorkout),
     );
+    setIsResetConfirmOpen(false);
     setStatusMessage("");
     setErrorMessage("");
   };
@@ -1462,28 +1509,28 @@ function Workout() {
     setErrorMessage("");
   };
 
+  const getUpdatedCompletionWorkoutSets = (
+    current,
+    exerciseId,
+    completed,
+  ) => {
+    const currentSet = current[exerciseId]?.[0];
 
-  const toggleCompletionExercise = (exerciseId) => {
-    setWorkoutSets((current) => {
-      const currentSet = current[exerciseId]?.[0];
-      const nextCompleted = !currentSet?.completed;
-
-      return {
-        ...current,
-        [exerciseId]: [
-          {
-            id: currentSet?.id ?? crypto.randomUUID(),
-            setNumber: 1,
-            weight: "",
-            reps: nextCompleted ? "1" : "",
-            rir: "",
-            resistanceType: "bodyweight",
-            exerciseNote: currentSet?.exerciseNote ?? "",
-            completed: nextCompleted,
-          },
-        ],
-      };
-    });
+    return {
+      ...current,
+      [exerciseId]: [
+        {
+          id: currentSet?.id ?? crypto.randomUUID(),
+          setNumber: 1,
+          weight: "",
+          reps: completed ? "1" : "",
+          rir: "",
+          resistanceType: "bodyweight",
+          exerciseNote: currentSet?.exerciseNote ?? "",
+          completed,
+        },
+      ],
+    };
   };
 
   const clearWorkoutDraft = async () => {
@@ -1521,6 +1568,67 @@ function Workout() {
     }
   };
 
+  const openResetFinishedWorkoutConfirm = () => {
+    if (!user || !selectedFinishedWorkout?.id) {
+      setErrorMessage(
+        "Unable to find the saved workout for this day.",
+      );
+      return;
+    }
+
+    setIsResetConfirmOpen(true);
+  };
+
+  const resetFinishedWorkout = async () => {
+    if (!user || !selectedFinishedWorkout?.id) {
+      setErrorMessage(
+        "Unable to find the saved workout for this day.",
+      );
+      return;
+    }
+
+    setIsSaving(true);
+    setIsResetConfirmOpen(false);
+    setStatusMessage("");
+    setErrorMessage("");
+
+    try {
+      await deleteWorkoutSession({
+        userId: user.id,
+        sessionId: selectedFinishedWorkout.id,
+      });
+
+      setFinishedDates((current) => {
+        const nextDates = new Set(current);
+        nextDates.delete(selectedDate);
+        return nextDates;
+      });
+      setHistory((current) =>
+        current.filter(
+          (session) => session.id !== selectedFinishedWorkout.id,
+        ),
+      );
+      setExerciseHistory((current) =>
+        current.filter(
+          (session) => session.id !== selectedFinishedWorkout.id,
+        ),
+      );
+      clearDraftForKey(selectedDate);
+      setCustomWorkout(baseWorkout);
+      setWorkoutSets(createWorkoutState(baseWorkout));
+      setDraftSaveStatus("idle");
+      setStatusMessage("Workout reset for this day.");
+
+      await loadHistory();
+      await loadWorkoutStatus();
+    } catch (error) {
+      console.error(error);
+      setErrorMessage(error.message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const handleSignIn = async () => {
     try {
       setErrorMessage("");
@@ -1531,7 +1639,9 @@ function Workout() {
     }
   };
 
-  const handleFinishWorkout = async () => {
+  const handleFinishWorkout = async (
+    workoutSetsToSave = workoutSets,
+  ) => {
     if (!user) {
       setErrorMessage(
         "Sign in with Google before finishing your workout.",
@@ -1550,7 +1660,7 @@ function Workout() {
         workoutDate: selectedDate,
         workoutName: workout.name,
         workout,
-        workoutSets,
+        workoutSets: workoutSetsToSave,
       });
       const savedSessionForState =
         createSessionFromWorkoutState({
@@ -1559,7 +1669,7 @@ function Workout() {
           workoutDay: selectedDay,
           workoutName: workout.name,
           workout,
-          workoutSets,
+          workoutSets: workoutSetsToSave,
         });
 
       const autoShareGroups = groups.filter(
@@ -1641,6 +1751,23 @@ function Workout() {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const completeAndFinishCompletionExercise = async (
+    exercise,
+  ) => {
+    if (selectedDayFinished || isSaving) {
+      return;
+    }
+
+    const nextWorkoutSets = getUpdatedCompletionWorkoutSets(
+      workoutSets,
+      exercise.id,
+      true,
+    );
+
+    setWorkoutSets(nextWorkoutSets);
+    await handleFinishWorkout(nextWorkoutSets);
   };
 
   const handleShareWorkout = async (session) => {
@@ -1816,13 +1943,24 @@ function Workout() {
           <p className="eyebrow">Training</p>
           <h1>{displayWorkout.name}</h1>
           <p>
-            {displayWorkout.focus} · Approximately{" "}
-            {displayWorkout.estimatedMinutes} minutes
+            {isCompletionWorkout
+              ? displayWorkout.focus
+              : `${displayWorkout.focus} · Approximately ${displayWorkout.estimatedMinutes} minutes`}
           </p>
         </div>
 
         <div className="workout-actions">
-          {!selectedDayFinished && (
+          {selectedDayFinished ? (
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={isSaving || isAuthLoading}
+              onClick={openResetFinishedWorkoutConfirm}
+            >
+              <RotateCcw size={17} />
+              Reset day
+            </button>
+          ) : (
             <button
               type="button"
               className="secondary-button"
@@ -1833,29 +1971,31 @@ function Workout() {
             </button>
           )}
 
-          <button
-            type="button"
-            className="primary-action-button"
-            disabled={
-              isSaving || isAuthLoading || selectedDayFinished
-            }
-            onClick={handleFinishWorkout}
-          >
-            {isSaving ? (
-              <LoaderCircle
-                className="spin"
-                size={17}
-              />
-            ) : (
-              <Check size={17} />
-            )}
+          {!isCompletionWorkout && (
+            <button
+              type="button"
+              className="primary-action-button"
+              disabled={
+                isSaving || isAuthLoading || selectedDayFinished
+              }
+              onClick={() => handleFinishWorkout()}
+            >
+              {isSaving ? (
+                <LoaderCircle
+                  className="spin"
+                  size={17}
+                />
+              ) : (
+                <Check size={17} />
+              )}
 
-            {selectedDayFinished
-              ? "Finished"
-              : isSaving
-              ? "Finishing…"
-              : "Finish workout"}
-          </button>
+              {selectedDayFinished
+                ? "Finished"
+                : isSaving
+                ? "Finishing…"
+                : "Finish workout"}
+            </button>
+          )}
         </div>
       </section>
 
@@ -1965,8 +2105,8 @@ function Workout() {
               ? "Workout finished"
               : isCompletionWorkout
               ? completedSets > 0
-                ? "Walk completed"
-                : "Walk not logged yet"
+                ? completionWorkoutLabels.completed
+                : completionWorkoutLabels.incomplete
               : `${completedSets} of ${totalSets} sets logged`}
           </strong>
           <small>{draftStatusText}</small>
@@ -2112,14 +2252,26 @@ function Workout() {
                   aria-pressed={Boolean(
                     completionSet?.completed,
                   )}
-                  onClick={() =>
-                    toggleCompletionExercise(exercise.id)
-                  }
+                  disabled={selectedDayFinished || isSaving}
+                  onClick={() => {
+                    if (!selectedDayFinished) {
+                      completeAndFinishCompletionExercise(
+                        exercise,
+                      );
+                    }
+                  }}
                 >
-                  <Check size={18} />
+                  {isSaving ? (
+                    <LoaderCircle
+                      className="spin"
+                      size={18}
+                    />
+                  ) : (
+                    <Check size={18} />
+                  )}
                   {completionSet?.completed
-                    ? "Walked today"
-                    : "Did you walk today?"}
+                    ? exercise.completionLabel ?? "Completed"
+                    : exercise.incompleteLabel ?? "Mark complete"}
                 </button>
               </article>
             );
@@ -2269,8 +2421,11 @@ function Workout() {
                   </div>
 
                   <div className="workout-history__exercises">
-                    {session.exercises.map(
-                      (exercise) => (
+                    {session.exercises.map((exercise) => {
+                      const completionExercise =
+                        getCompletionExerciseDefinition(exercise);
+
+                      return (
                         <div
                           key={exercise.exerciseId}
                         >
@@ -2286,18 +2441,20 @@ function Workout() {
                           </div>
 
                           <span>
-                            {exercise.sets
-                              .map(
-                                (set) =>
-                                  formatSetPerformance(set, {
-                                    showRir: trackRir,
-                                  }),
-                              )
-                              .join(" | ")}
+                            {completionExercise
+                              ? completionExercise.completionLabel ??
+                                "Completed"
+                              : exercise.sets
+                                  .map((set) =>
+                                    formatSetPerformance(set, {
+                                      showRir: trackRir,
+                                    }),
+                                  )
+                                  .join(" | ")}
                           </span>
                         </div>
-                      ),
-                    )}
+                      );
+                    })}
                   </div>
                 </article>
               ))}
@@ -2313,6 +2470,70 @@ function Workout() {
         onClose={closeExerciseEditor}
         onSubmit={submitExerciseEditor}
       />
+
+      {isResetConfirmOpen && (
+        <div className="workout-modal-backdrop">
+          <section
+            className="workout-modal workout-modal--confirm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="reset-workout-title"
+          >
+            <div className="workout-modal__header">
+              <div>
+                <p className="eyebrow">Reset day</p>
+                <h2 id="reset-workout-title">
+                  Delete this saved session?
+                </h2>
+              </div>
+
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Close reset confirmation"
+                disabled={isSaving}
+                onClick={() => setIsResetConfirmOpen(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <p className="workout-modal__message">
+              This will remove the saved {displayWorkout.name} log
+              for {formatShortDate(selectedDate)}. You can log the
+              day again afterward.
+            </p>
+
+            <div className="workout-modal__actions">
+              <button
+                type="button"
+                className="secondary-button"
+                disabled={isSaving}
+                onClick={() => setIsResetConfirmOpen(false)}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                className="primary-action-button"
+                disabled={isSaving}
+                onClick={resetFinishedWorkout}
+              >
+                {isSaving ? (
+                  <LoaderCircle
+                    className="spin"
+                    size={17}
+                  />
+                ) : (
+                  <RotateCcw size={17} />
+                )}
+                Reset day
+              </button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }

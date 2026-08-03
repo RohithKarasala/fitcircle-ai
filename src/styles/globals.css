@@ -2461,6 +2461,10 @@ a {
   box-shadow: 0 22px 70px rgb(0 0 0 / 42%);
 }
 
+.workout-modal--confirm {
+  width: min(460px, 100%);
+}
+
 .workout-modal__header {
   display: flex;
   align-items: flex-start;
@@ -2569,6 +2573,13 @@ a {
   color: #ffb0b0;
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.workout-modal__message {
+  margin: 0 0 18px;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.5;
 }
 
 .workout-modal__actions {
@@ -3420,6 +3431,11 @@ a {
 
 .recovery-card__toggle:hover {
   background: var(--surface-hover);
+}
+
+.recovery-card__toggle:disabled {
+  cursor: default;
+  opacity: 0.86;
 }
 
 .recovery-card__toggle--active {

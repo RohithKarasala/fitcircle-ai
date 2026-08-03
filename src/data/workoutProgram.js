@@ -425,11 +425,35 @@ export const workoutProgram = {
         name: "Outdoor Walk",
         equipment: "Bodyweight",
         trackingType: "completion",
+        completionLabel: "Walked today",
+        incompleteLabel: "Did you walk today?",
         sets: 1,
         repRange: "30–45 min",
         restSeconds: 0,
         description:
           "Keep the pace easy enough to hold a conversation. Get outside if you can and let this support recovery rather than feel like another hard session.",
+      },
+    ],
+  },
+
+  rest: {
+    label: "Rest",
+    name: "Rest Day",
+    focus: "Full recovery with no planned training",
+    estimatedMinutes: 0,
+    exercises: [
+      {
+        id: "rest-day",
+        name: "Rest Day",
+        equipment: "Recovery",
+        trackingType: "completion",
+        completionLabel: "Rested today",
+        incompleteLabel: "Taking rest today?",
+        sets: 1,
+        repRange: "Rest",
+        restSeconds: 0,
+        description:
+          "Take the day off from planned training. Prioritize sleep, food, hydration, and letting your body recover.",
       },
     ],
   },

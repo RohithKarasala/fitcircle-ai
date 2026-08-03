@@ -78,7 +78,42 @@ function getDateKey(value = new Date()) {
     .slice(0, 10);
 }
 
-function getCompletedWorkoutDatesThisWeek(sessions) {
+function getWeekdayKeyFromDate(value) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+
+  const dayMap = {
+    0: "sunday",
+    1: "monday",
+    2: "tuesday",
+    3: "wednesday",
+    4: "thursday",
+    5: "friday",
+    6: "saturday",
+  };
+
+  return dayMap[date.getDay()] ?? null;
+}
+
+function isStrengthWorkout(workout) {
+  return (workout?.exercises ?? []).some(
+    (exercise) => exercise.trackingType !== "completion",
+  );
+}
+
+function getStrengthWorkoutTarget(schedule) {
+  return Object.values(schedule).filter((workoutKey) =>
+    isStrengthWorkout(workoutProgram[workoutKey]),
+  ).length;
+}
+
+function getCompletedStrengthWorkoutDatesThisWeek(
+  sessions,
+  schedule,
+) {
   const weekStart = getWeekStart();
 
   if (!weekStart) {
@@ -90,11 +125,16 @@ function getCompletedWorkoutDatesThisWeek(sessions) {
 
   return new Set(sessions.filter((session) => {
     const date = new Date(session.date);
+    const day = getWeekdayKeyFromDate(session.date);
+    const scheduledWorkout =
+      workoutProgram[schedule[day]] ?? null;
 
     return (
       !Number.isNaN(date.getTime()) &&
       date >= weekStart &&
-      date < nextWeekStart
+      date < nextWeekStart &&
+      scheduledWorkout &&
+      isStrengthWorkout(scheduledWorkout)
     );
   }).map((session) => getDateKey(session.date)));
 }
@@ -334,7 +374,8 @@ function Dashboard() {
     0,
   );
   const completedThisWeek = completedWorkoutDates.size;
-  const weeklyWorkoutTarget = 5;
+  const weeklyWorkoutTarget =
+    getStrengthWorkoutTarget(workoutSchedule);
   const remainingWorkoutsThisWeek = Math.max(
     0,
     weeklyWorkoutTarget - completedThisWeek,
@@ -343,6 +384,7 @@ function Dashboard() {
     todayWorkout.exercises.every(
       (exercise) => exercise.trackingType === "completion",
     );
+  const isRestDay = todayWorkoutKey === "rest";
 
   useEffect(() => {
     let isCurrent = true;
@@ -395,15 +437,17 @@ function Dashboard() {
         const nextWeight = profile?.currentWeightLb ?? null;
 
         setProfileDisplayName(profile?.displayName ?? "");
-        setWorkoutSchedule(
-          normalizeWorkoutSchedule(
-            profile?.workoutSchedule ??
-              defaultWorkoutSchedule,
-          ),
+        const normalizedSchedule = normalizeWorkoutSchedule(
+          profile?.workoutSchedule ?? defaultWorkoutSchedule,
         );
+
+        setWorkoutSchedule(normalizedSchedule);
         setIsTodayWorkoutFinished(todaySessions.length > 0);
         setCompletedWorkoutDates(
-          getCompletedWorkoutDatesThisWeek(weekSessions),
+          getCompletedStrengthWorkoutDatesThisWeek(
+            weekSessions,
+            normalizedSchedule,
+          ),
         );
         setNutritionTotals(
           getNutritionTotals(nutrition.entries),
@@ -496,18 +540,34 @@ function Dashboard() {
 
           <div className="workout-summary">
             <div>
-              <span>Exercises</span>
+              <span>
+                {isRecoveryWorkout ? "Plan items" : "Exercises"}
+              </span>
               <strong>{todayWorkout.exercises.length}</strong>
             </div>
 
             <div>
-              <span>Estimated time</span>
-              <strong>{todayWorkout.estimatedMinutes} min</strong>
+              <span>
+                {isRecoveryWorkout ? "Focus" : "Estimated time"}
+              </span>
+              <strong>
+                {isRecoveryWorkout
+                  ? isRestDay
+                    ? "Rest"
+                    : "Walk"
+                  : `${todayWorkout.estimatedMinutes} min`}
+              </strong>
             </div>
 
             <div>
-              <span>Total sets</span>
-              <strong>{todayWorkoutSetCount}</strong>
+              <span>
+                {isRecoveryWorkout ? "Type" : "Total sets"}
+              </span>
+              <strong>
+                {isRecoveryWorkout
+                  ? todayWorkout.name
+                  : todayWorkoutSetCount}
+              </strong>
             </div>
           </div>
 
